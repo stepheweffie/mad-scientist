@@ -129,9 +129,9 @@ async def get_chat(request: Request, brain_model: str = Query(None), image_model
         
     ai_intro = await mad_scientist.chat_message(request, brain_model, inputs)
     
-    # Retrieve 'messages' from the session
-    messages = await mad_scientist.get_session(request=request, variable="messages")
-
+    if 'messages' in request.session:
+        messages = await mad_scientist.get_session(request=request, variable="messages")
+            
     # Render the chat template with the session data
     return templates.TemplateResponse("chat.html", {
         "request": request,
@@ -147,22 +147,9 @@ async def get_chat(request: Request, brain_model: str = Query(None), image_model
 @app.post("/mad-scientist/")
 async def post_chat(request: Request, prompt: str = Form(...), brain_model: str = Form(...)):
     mad_scientist = MadScientist(request)
-    data = f'{PROMPT_INTRO}'
     # Initialize 'messages' in the session if it doesn't exist
-    if 'messages' not in request.session:
-        await mad_scientist.set_session(request=request, variable="messages", data=data)
-        ai_response = await mad_scientist.chat_message(brain_model, prompt)
-    messages = await mad_scientist.get_session(request=request, variable="messages")
-    messages.append({"user": prompt, "ai": ai_response})
-    
+    messages = await mad_scientist.get_session(request=request, variable="messages")    
     # Redirect back to the chat page to display the updated chat history
     return templates.TemplateResponse("chat.html", {"request": request, "css_styles": css_styles, "brain_model": brain_model, "app_name": app_name, "messages": messages
                                                     ,"durl": data_url})
 
-'''
-@app.get("/mad-scientist/dr-jorpy/", response_class=JSONResponse)
-async def dr_jorpy(request: Request, token: Token = Depends()):
-    mad_scientist = MadScientist(request)
-    # ai_response = mad_scientist.jorpy_reply(token=token)
-    # return ai_response
-'''

@@ -12,14 +12,14 @@
     <div>
         <form action="/mad-scientist/" method="post">
         <div class="message">Welcome to {{ app_name }} Chat! You are running {{ brain_model }}</div>
-        <textarea class="message-text" id="messageInput" rows="4" cols="50" placeholder="Chat here..."></textarea>
+        <textarea class="message-text" name="prompt" id="messageInput" rows="4" cols="50" placeholder="Chat here..."></textarea> 
         <input type="hidden" name="brain_model" value="{{ brain_model }}">
         <input type="hidden" name="image_model" value="{{ image_model }}">    
         <button class="submit input-element">Send</button>
         </form>
     <div class="message">
    <!-- Display the last user message here -->
-        {% if messages %}
+        {% if messages and messages|length > 1 %}
             <div class="message last-user-message">
                 <span class="message-sender">You:</span>
                 <p class="message-text">{{ messages[-1].user }}</p>

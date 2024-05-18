@@ -175,6 +175,8 @@ class MadScientist:
                 ai_response = result['result']['response']
                 # Append the user message and AI response to the session messages
                 messages = await self.get_session(request, "messages") or []
+                if user_message == inputs:
+                    user_message = 'Hi, Mad Scientist AI. Please introduce yourself.'
                 messages.append({
                     "user": user_message,
                     "ai": ai_response
@@ -201,9 +203,9 @@ class MadScientist:
             mid = mid_response.strip()  # Remove leading/trailing whitespace
             if 'chats' not in request.session:
                 await self.set_session(request=request, variable="chats", data=[])
-                
             if 'messages' not in request.session:
                 reply = await self.chat(request, mid, inputs)
+
             else:
                 reply = await self.chat(request, mid, message)
                 
