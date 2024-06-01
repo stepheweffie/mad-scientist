@@ -17,7 +17,8 @@ templates = Jinja2Templates(directory="templates")
 app.add_middleware(SessionMiddleware, secret_key="secret")
 app_name = "Mad Scientist"
 durl = {}
-
+responses = {}
+responses['ai'] = []
 @app.get("/models", response_model=list[AI], response_class=PlainTextResponse)
 async def models(request: Request):
     mad_scientist = MadScientist(request)
@@ -72,10 +73,34 @@ html_content = f"""
 </html>
 """
 
+initial_html_content = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mad Scientist AI - Email Verification</title>
+    <style>{css_styles}</style>
+</head>
+<body>
+    <div class="centered form-containter">
+    <h1>Mad Scientist AI</h1>
+    <form action="/verify-email/" method="post">
+    <p>Email Address</p>
+    <input class="input-element" type="email" name="email" required><br><br>
+    <button class="input-element submit" type="submit">Verify</button>
+    </form>
+    </div>
+</body>
+</html>
+"""
+
+
 @app.get("/")
 async def root(request: Request):
     mad_scientist = MadScientist(request)
     messages = await mad_scientist.set_session(request=request, variable="messages", data='')
+    token = await mad_scientist.set_session(request=request, variable="token", data='')    
     return HTMLResponse(content=html_content, status_code=200)
 
 @app.get("/generate-avatar/")
@@ -83,6 +108,8 @@ async def generate_avatar(request: Request, brain_model: str = Query(None), imag
     mad_scientist = MadScientist(request)
     data_url = await get_avatar_data_url(request, img_model=image_model, prompt_text=prompt)
     durl['data_url'] = data_url
+    await mad_scientist.set_session(request=request, variable="chat", data=False)
+
     avatar_page = f'''
     <!DOCTYPE html>
     <html lang="en">
@@ -121,35 +148,60 @@ async def generate_avatar(request: Request, brain_model: str = Query(None), imag
 @app.get("/mad-scientist/")
 async def get_chat(request: Request, brain_model: str = Query(None), image_model: str = Query(None), prompt: str = Query(None)):
     mad_scientist = MadScientist(request)
-    if 'durl' not in request.session:
+    if len(durl) > 0:
         data_url = durl['data_url']
-        mad_scientist.set_session(request=request, variable="durl", data=data_url)
     else:
-        data_url = mad_scientist.get_session(request, "durl")
+        data_url = await get_avatar_data_url(request, img_model=image_model, prompt_text='A Mad Scientist')
+        durl['data_url'] = data_url
         
-    ai_intro = await mad_scientist.chat_message(request, brain_model, inputs)
+    chat = await mad_scientist.get_session(request=request, variable="chat")
+    if chat is False:
+        ai_intro = await mad_scientist.chat_message(request, brain_model, inputs)
+        # Check it for obvious errors
+        ai_intro = ai_intro.replace("Dr.", "").strip()
+        ai_intro = ai_intro.replace("you are my", "I am your").strip()
+        # Dummy message
+        message = 'Hello, Mad Scientist AI. Please introduce yourself.'
+        responses['intro'] = ai_intro
+        return templates.TemplateResponse("chat.html", {
+            "request": request,
+            "css_styles": css_styles,
+            "brain_model": brain_model,
+            "app_name": app_name,
+            "message": message,
+            "durl": data_url,
+            "response": responses['intro'],
+        })
     
-    if 'messages' in request.session:
-        messages = await mad_scientist.get_session(request=request, variable="messages")
+    else:
+        return templates.TemplateResponse("chat.html", {
+            "request": request,
+            "css_styles": css_styles,
+            "brain_model": brain_model,
+            "app_name": app_name,
+            "message": prompt,
+            "durl": data_url,
+            "response": responses['ai'][-1],
+        })
             
-    # Render the chat template with the session data
-    return templates.TemplateResponse("chat.html", {
-        "request": request,
-        "css_styles": css_styles,
-        "brain_model": brain_model,
-        "app_name": app_name,
-        "messages": messages,
-        "durl": data_url,
-        "intro": ai_intro,
-    })
-
 
 @app.post("/mad-scientist/")
 async def post_chat(request: Request, prompt: str = Form(...), brain_model: str = Form(...)):
     mad_scientist = MadScientist(request)
-    # Initialize 'messages' in the session if it doesn't exist
-    messages = await mad_scientist.get_session(request=request, variable="messages")    
-    # Redirect back to the chat page to display the updated chat history
-    return templates.TemplateResponse("chat.html", {"request": request, "css_styles": css_styles, "brain_model": brain_model, "app_name": app_name, "messages": messages
-                                                    ,"durl": data_url})
+    ai_response = await mad_scientist.chat_message(request, brain_model, prompt)
+    # Redirect back to the GET chat page to display the updated chat history
+    ai = responses['ai']
+    ai.append(ai_response)
+    print(ai, ai[-1])
+    response = RedirectResponse(
+        url=f"/mad-scientist/?brain_model={brain_model}&app_name={app_name}&prompt={prompt}",
+        status_code=303
+    )
+    response.set_cookie(key="session", value=request.session)  # Ensure the session cookie is updated
+    return response
+
+# @app.get("/mad-scientist/session/messages", response_model=list[MESSAGE], response_class=PlainTextResponse)
+# async def get_messages(request: Request)
+#    messages = await self.get_session(request, "messages") or []
+#    return messages
 

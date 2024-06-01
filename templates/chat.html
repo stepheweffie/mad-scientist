@@ -19,12 +19,12 @@
         </form>
     <div class="message">
    <!-- Display the last user message here -->
-        {% if messages and messages|length > 1 %}
+       
             <div class="message last-user-message">
                 <span class="message-sender">You:</span>
-                <p class="message-text">{{ messages[-1].user }}</p>
+                <p class="message-text">{{ message }} </p>
             </div>
-        {% endif %}
+      
     </div>
     </div>
     </div>
@@ -36,7 +36,7 @@
     <div class="avatar">
         <img src={{ durl }} id="avatarImage" alt="Generated Avatar">    
     </div>
-    <p class="message-text">{{ intro }}</p>
+    <p class="message-text">{{ response }}</p>
     
     </div>
     </div>

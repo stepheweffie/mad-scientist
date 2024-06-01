@@ -4,6 +4,7 @@ from pydantic import BaseModel
 import base64
 from settings import ACCOUNT_ID, AUTH_TOKEN, API_BASE_URL
 from typing import Any, Dict
+# from mad_sci_mistral_instruct import tokenizer
 import requests
 ACCOUNT_ID = ACCOUNT_ID
 AUTH_TOKEN = AUTH_TOKEN
@@ -12,6 +13,13 @@ headers = {"Authorization": f"Bearer {AUTH_TOKEN}"}
 
 # Data for AI models
 models = [
+     {
+        "model": "Mad Sci Mistral-7B Instruct",
+        "description": "Mad Sci is a fine-tuned version of the Mistral-7b Instruct generative text model with 7 billion parameters",
+        "mid": "SavantofIllusions/mad_sci_mistral_instruct",
+        "name": "mad_sci_mistral_instruct",
+        "usage": "text"
+    },
     {
         "model": "Mistral-7b Instruct",
         "description": "Instruct fine-tuned version of the Mistral-7b generative text model with 7 billion parameters",
@@ -24,14 +32,7 @@ models = [
         "description": "Hermes 2 Pro on Mistral 7B is the new flagship 7B Hermes! Hermes 2 Pro is an upgraded, retrained version of Nous Hermes 2, consisting of an updated and cleaned version of the OpenHermes 2.5 Dataset, as well as a newly introduced Function Calling and JSON Mode dataset developed in-house",
         "mid": "@hf/nousresearch/hermes-2-pro-mistral-7b",
         "name": "hermes_2_pro_on_mistral_7b",
-        "usage": "mad-sci-text"
-    },
-    {
-        "model": "Claude 3",
-        "description": "Claude 3 by Anthropic",
-        "mid": "",
-        "name": "claude_3",
-        "usage": "jorpy-text"
+        "usage": "text"
     },
     {
         "model": "Dreamshaper-8 LCM",
@@ -60,8 +61,7 @@ inputs = [
       If you are given a statement you will rephrase it as a question and then proceed to answer the question as
       if you have been asked that question in the original input.
       You will offer examples that counter false assumptions made in the input.""" },
-    { "role": "user", "content": """give your self an appropriate gender neutral first and last name and prepend it with
-      Dr. Now, introduce yourself by saying Hi, I am [name], the Mad Scientist AI."""}
+    { "role": "user", "content": """You are the Mad Scientist AI, my new assistant. Introduce us as such."""}
 ]
 
 class AI(BaseModel):
@@ -146,6 +146,7 @@ class MadScientist:
         for mod in models:
             if mod["model"] == model:
                 return mod["name"]
+            
 
     async def chat(self, request: Request, mod_id: str, user_message: str) -> dict:
         # Update the user's message within the inputs structure
@@ -165,18 +166,10 @@ class MadScientist:
         if response.status_code == 200:
             if 'result' in result and 'response' in result['result']:
                 data = {"message": result['result']['response'], "model": mod_id, "prompt": user_message}
-                
-                # Append the user message and AI response to the session messages
-                if 'chats' in request.session:
-                    chats = await self.get_session(request, "chats") or []
-                    chats.append(data)
-                    self.set_session(request=request, variable="chats", data=data)
                     
                 ai_response = result['result']['response']
                 # Append the user message and AI response to the session messages
                 messages = await self.get_session(request, "messages") or []
-                if user_message == inputs:
-                    user_message = 'Hi, Mad Scientist AI. Please introduce yourself.'
                 messages.append({
                     "user": user_message,
                     "ai": ai_response
@@ -186,11 +179,27 @@ class MadScientist:
         else:
             # Handle any errors from the API call
             raise HTTPException(status_code=response.status_code, detail="Failed to call AI model")
-    
+
+
+    async def finetuned_chat(self, request: Request, mod_id: str, user_message: str) -> dict:
+        # Update the user's message within the inputs structure
+        if isinstance(user_message, list):
+            updated_inputs = user_message
+        else:
+            updated_inputs = [{"role": "user", "content": user_message}]
+        # Prepare the input for the model
+        inputs = tokenizer(user_message, return_tensors="pt")
+        # Generate a response using the model
+        with torch.no_grad():
+            outputs = model.generate(**inputs)
+        # Decode the generated response
+        ai_response = tokenizer.decode(outputs[0], skip_special_tokens=True)
+        # Prepare the response data
+        data = {"message": ai_response, "model": mod_id, "prompt": user_message}        
+        return ai_response
+
         
     async def chat_message(self, request: Request, brain_model: str, message: str) -> str:
-        # Here, you would integrate with your AI model
-        # This is a simplified placeholder
         try:
             # Call the /models/{model} route to get the model name
             model_name_response = await self.get_model_name_by_model(request, brain_model)
@@ -201,18 +210,16 @@ class MadScientist:
         try:
             mid_response = await self.get_mid_by_model_name(request, model_name)
             mid = mid_response.strip()  # Remove leading/trailing whitespace
-            if 'chats' not in request.session:
-                await self.set_session(request=request, variable="chats", data=[])
-            if 'messages' not in request.session:
+            chat = await self.get_session(request=request, variable="chat")
+            if chat is False:
                 reply = await self.chat(request, mid, inputs)
-
+                await self.set_session(request=request, variable="chat", data=True)
             else:
                 reply = await self.chat(request, mid, message)
-                
         except HTTPException as e:
             logger.error(f"Failed to get model id name for {model_name}: {e}")
             return HTMLResponse(content=f"Model not found: {brain_model}", status_code=404)
-
-        ai_response = reply
-        return ai_response
+        
+        await self.set_session(request=request, variable='chat', data=True)
+        return reply
     
