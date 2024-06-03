@@ -3,7 +3,7 @@ from fastapi import FastAPI, HTTPException, Query, Form, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
-from mad_scientist import MadScientist, get_avatar_data_url, AI, brain_options, art_options, inputs
+from mad_scientist import MadScientist, get_avatar_data_url, AI, brain_options, art_options, inputs, SECRET_KEY
 from static import css_styles
 import requests
 import httpx
