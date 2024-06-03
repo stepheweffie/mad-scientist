@@ -14,11 +14,12 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
-app.add_middleware(SessionMiddleware, secret_key="secret")
+app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
 app_name = "Mad Scientist"
 durl = {}
 responses = {}
 responses['ai'] = []
+
 @app.get("/models", response_model=list[AI], response_class=PlainTextResponse)
 async def models(request: Request):
     mad_scientist = MadScientist(request)
@@ -95,13 +96,12 @@ initial_html_content = f"""
 </html>
 """
 
-
 @app.get("/")
 async def root(request: Request):
     mad_scientist = MadScientist(request)
     messages = await mad_scientist.set_session(request=request, variable="messages", data='')
     token = await mad_scientist.set_session(request=request, variable="token", data='')    
-    return HTMLResponse(content=html_content, status_code=200)
+    return HTMLResponse(content=initial_html_content, status_code=200)
 
 @app.get("/generate-avatar/")
 async def generate_avatar(request: Request, brain_model: str = Query(None), image_model: str = Query(None), prompt: str = Query(None)):
@@ -192,13 +192,22 @@ async def post_chat(request: Request, prompt: str = Form(...), brain_model: str 
     # Redirect back to the GET chat page to display the updated chat history
     ai = responses['ai']
     ai.append(ai_response)
-    print(ai, ai[-1])
     response = RedirectResponse(
         url=f"/mad-scientist/?brain_model={brain_model}&app_name={app_name}&prompt={prompt}",
         status_code=303
     )
     response.set_cookie(key="session", value=request.session)  # Ensure the session cookie is updated
     return response
+
+
+@app.post("/verify-email/")
+async def post_email(request: Request, email: str = Form(...)):
+    response = RedirectResponse(
+        url=f"/",
+        status_code=303
+    )
+    return response
+
 
 # @app.get("/mad-scientist/session/messages", response_model=list[MESSAGE], response_class=PlainTextResponse)
 # async def get_messages(request: Request)
