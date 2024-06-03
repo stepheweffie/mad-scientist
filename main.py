@@ -44,19 +44,21 @@ async def model_api_name(model: str):
         model_name = mad_scientist.get_model_name_by_model(model=model)
         return model_name
 
-html_content = f"""
+google_stream0 = f'''
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id={GTAG}"></script>
+<script>window.dataLayer = window.dataLayer || [];'''
+google_stream1 = 'function gtag(){dataLayer.push(arguments);} gtag("js", new Date());'
+google_stream2 = f'''gtag('config', '{GTAG}');</script>'''
+
+html_content0 = f'''
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id={GTAG}"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', '{GTAG}');
-</script>
+    {google_stream0}'''
+html_content1 = google_stream1
+html_content2 = f'''
+    {google_stream2}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mad Scientist AI</title>
@@ -81,21 +83,16 @@ html_content = f"""
     </div>
 </body>
 </html>
-"""
+'''
+html_content = html_content0 + html_content1 + html_content2
 
-initial_html_content = f"""
+initial_html_content0 = f'''
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id={GTAG}"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', '{GTAG}');
-</script>
+    {google_stream0}'''
+initial_html_content1 = google_stream1
+initial_html_content2 = f'''
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mad Scientist AI - Email Verification</title>
@@ -112,7 +109,8 @@ initial_html_content = f"""
     </div>
 </body>
 </html>
-"""
+'''
+initial_html_content = initial_html_content0 + initial_html_content1 + initial_html_content2
 
 @app.get("/")
 async def root(request: Request):
