@@ -1,6 +1,6 @@
 fastapi==0.108.0
 uvicorn==0.25.0
-itisdangerous==2.1.2
+itsdangerous==2.1.2
 pydantic==2.5.3
 requests==2.31.0
 httpx==0.26.0
