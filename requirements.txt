@@ -1,7 +1,7 @@
 fastapi==0.108.0
 uvicorn==0.25.0
 Jinja2==3.1.2
-python-mulitpart
+python-multipart==0.0.9
 itsdangerous==2.1.2
 pydantic==2.5.3
 requests==2.31.0
