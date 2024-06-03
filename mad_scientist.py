@@ -11,6 +11,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 API_BASE_URL = os.getenv("API_BASE_URL")
 ACCOUNT_ID = os.getenv("ACCOUNT_ID")
 AUTH_TOKEN = os.getenv("AUTH_TOKEN")
+GTAG = os.getenv("GTAG")
 
 headers = {"Authorization": f"Bearer {AUTH_TOKEN}"}
 
