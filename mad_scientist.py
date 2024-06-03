@@ -2,10 +2,11 @@ from fastapi import HTTPException, Request, Query
 from starlette.responses import RedirectResponse
 from pydantic import BaseModel
 import base64
-from settings import ACCOUNT_ID, AUTH_TOKEN, API_BASE_URL
+# from settings import ACCOUNT_ID, AUTH_TOKEN, API_BASE_URL, SECRET_KEY
 from typing import Any, Dict
 # from mad_sci_mistral_instruct import tokenizer
 import requests
+SECRET_KEY = SECRET_KEY
 ACCOUNT_ID = ACCOUNT_ID
 AUTH_TOKEN = AUTH_TOKEN
 API_BASE_URL = API_BASE_URL
