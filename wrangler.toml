@@ -3,6 +3,11 @@ main = "src/worker.py"
 compatibility_flags = ["python_workers"]
 compatibility_date = "2024-01-15"
 
+# Custom domain route for mad-scientist.chat
+routes = [
+  "mad-scientist.chat/*"
+]
+
 # Environment variables
 [vars]
 APP_NAME = "Mad Scientist AI Chat"

@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  deploy:
+    build:
+      context: .
+      dockerfile: Dockerfile.deploy
+    environment:
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
+    volumes:
+      - .:/app
+    working_dir: /app

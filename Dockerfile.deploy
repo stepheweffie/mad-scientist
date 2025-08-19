@@ -1,0 +1,31 @@
+# Deployment Dockerfile - Uses Ubuntu 22.04 with proper GLIBC for Wrangler
+FROM ubuntu:22.04
+
+# Install Node.js 20 and Python
+RUN apt-get update && apt-get install -y \
+    curl \
+    python3 \
+    python3-pip \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Copy project files
+COPY package*.json ./
+COPY wrangler.toml ./
+COPY cf-requirements.txt ./
+COPY src/ ./src/
+
+# Install Node.js dependencies and Wrangler
+RUN npm install
+RUN npm install -g wrangler
+
+# Create deployment script
+COPY deploy.sh ./
+RUN chmod +x deploy.sh
+
+# Default command
+CMD ["./deploy.sh"]
