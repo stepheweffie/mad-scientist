@@ -1,39 +1,30 @@
-# Use the official Node.js 20 image with Ubuntu
-FROM node:20-bullseye
+# Use Python 3.11 with Ubuntu 22.04 for better compatibility
+FROM python:3.11-slim
 
 # Set working directory
 WORKDIR /app
 
-# Install Python and pip
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
-    python3 \
-    python3-pip \
-    python3-venv \
+    curl \
+    git \
     && rm -rf /var/lib/apt/lists/*
-
-# Create a symbolic link for python
-RUN ln -s /usr/bin/python3 /usr/bin/python
-
-# Copy package files
-COPY package*.json ./
-COPY wrangler.toml ./
-
-# Install Node.js dependencies (including Wrangler)
-RUN npm install
-RUN npm install -g wrangler
 
 # Copy Python requirements and install
 COPY requirements.txt ./
-RUN pip3 install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the source code
+# Copy the application files
+COPY local_dev.py ./
 COPY src/ ./src/
+COPY wrangler.toml ./
 
-# Expose the port that Wrangler dev server uses
-EXPOSE 8787
+# Expose the port that the local dev server uses
+EXPOSE 8000
 
 # Set environment variables
-ENV NODE_ENV=development
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
 
-# Start the development server
-CMD ["wrangler", "dev", "--port", "8787", "--host", "0.0.0.0"]
+# Start the local development server (with mock AI responses)
+CMD ["python", "local_dev.py"]

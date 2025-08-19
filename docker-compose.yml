@@ -4,13 +4,14 @@ services:
   mad-scientist:
     build: .
     ports:
-      - "8787:8787"
+      - "8080:8000"  # Map local port 8080 to container port 8000
     volumes:
       - ./src:/app/src
-      - ./wrangler.toml:/app/wrangler.toml
+      - ./local_dev.py:/app/local_dev.py
       - ./requirements.txt:/app/requirements.txt
     environment:
-      - NODE_ENV=development
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
     stdin_open: true
     tty: true
     restart: unless-stopped
