@@ -1,5 +1,5 @@
 name = "mad-scientist"
-main = "src/worker.py"
+main = "src/worker_simple.py"
 compatibility_flags = ["python_workers"]
 compatibility_date = "2024-01-15"
 

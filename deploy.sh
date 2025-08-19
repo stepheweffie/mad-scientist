@@ -5,21 +5,24 @@ echo "======================================================="
 
 # Check if CLOUDFLARE_API_TOKEN is set
 if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
-    echo "❌ Error: CLOUDFLARE_API_TOKEN environment variable is required"
-    echo "Please set your Cloudflare API token:"
+    echo "❌ Error: CLOUDFLARE_API_TOKEN environment variable not found"
+    echo ""
+    echo "🔧 To set up your API token, run: ./setup_api.sh"
+    echo "Or manually set it with:"
     echo "export CLOUDFLARE_API_TOKEN=your_token_here"
+    echo ""
     exit 1
 fi
 
-# Set the API token for Wrangler
-export CLOUDFLARE_API_TOKEN=$CLOUDFLARE_API_TOKEN
-
-echo "✅ Cloudflare API Token configured"
-echo "📋 Project configuration:"
-cat wrangler.toml
-
+echo "✅ Using global Cloudflare API Token"
+echo "📋 Project: mad-scientist"
+echo "🌐 Domain: mad-scientist.chat"
 echo ""
 echo "🚀 Deploying to Cloudflare Workers..."
+
+# Load NVM and use Node 20
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
 # Deploy to Cloudflare Workers
 wrangler deploy --yes
@@ -27,15 +30,14 @@ wrangler deploy --yes
 if [ $? -eq 0 ]; then
     echo ""
     echo "🎉 Deployment successful!"
-    echo "🌐 Your Mad Scientist AI Chat is now live!"
+    echo "🌐 Mad Scientist AI Chat is live at:"
+    echo "   👉 https://mad-scientist.chat"
     echo ""
-    echo "Next steps to add custom domain:"
-    echo "1. Go to https://dash.cloudflare.com"
-    echo "2. Navigate to Workers & Pages > mad-scientist"
-    echo "3. Go to Settings > Triggers"
-    echo "4. Add Custom Domain and enter your domain"
+    echo "🔗 Also available at .workers.dev subdomain"
+    echo "📊 Check status: https://mad-scientist.chat/health"
     echo ""
 else
     echo "❌ Deployment failed"
+    echo "💡 Try running: ./setup_api.sh to check your API token"
     exit 1
 fi
