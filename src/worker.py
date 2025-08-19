@@ -9,6 +9,7 @@ app = FastAPI(title="Mad Scientist AI Chat", description="An AI-powered chat int
 class ChatMessage(BaseModel):
     message: str
     model: str = "@cf/meta/llama-3-8b-instruct"
+    max_tokens: int = 1024  # Response length: 512=short, 1024=medium, 2048=long, 4096=very long
 
 class ChatResponse(BaseModel):
     response: str
@@ -111,7 +112,7 @@ async def chat_endpoint(chat_message: ChatMessage, request: Request):
             chat_message.model,
             {
                 "messages": messages,
-                "max_tokens": 1024,
+                "max_tokens": chat_message.max_tokens,
                 "temperature": 0.7
             }
         )

@@ -30,13 +30,15 @@ Send a message to the AI and receive a response.
 ```json
 {
   "message": "Your question here",
-  "model": "@cf/meta/llama-3-8b-instruct"
+  "model": "@cf/meta/llama-3-8b-instruct",
+  "max_tokens": 1024
 }
 ```
 
 **Parameters**:
 - `message` (string, required): The user's message/question
 - `model` (string, optional): AI model to use. Defaults to `@cf/meta/llama-3-8b-instruct`
+- `max_tokens` (integer, optional): Maximum response length. Defaults to 1024
 
 **Response**:
 ```json
@@ -243,10 +245,45 @@ All API responses follow consistent formatting:
 }
 ```
 
+## Response Length Configuration
+
+You can control the length of AI responses using the `max_tokens` parameter:
+
+### Token Length Guide
+
+| max_tokens | Approximate Length | Use Case |
+|------------|-------------------|----------|
+| 512 | ~350-400 words | Short answers, quick responses |
+| 1024 | ~700-800 words | **Default** - Balanced responses |
+| 2048 | ~1,400-1,600 words | Detailed explanations |
+| 4096 | ~2,800-3,200 words | Very detailed responses |
+
+### Model-Specific Limits
+
+| Model | Maximum Tokens | Recommended Max |
+|-------|----------------|----------------|
+| `@cf/meta/llama-3-8b-instruct` | 8,192 | 4,096 |
+| `@cf/mistral/mistral-7b-instruct-v0.1` | 32,768 | 8,192 |
+| `@cf/meta/llama-3-70b-instruct` | 8,192 | 4,096 |
+| `@cf/google/gemma-7b-it` | 8,192 | 4,096 |
+
+### Example: Long Response
+
+```bash
+curl -X POST "https://your-worker.workers.dev/chat" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Explain the history of artificial intelligence in detail",
+    "model": "@cf/meta/llama-3-8b-instruct",
+    "max_tokens": 2048
+  }'
+```
+
 ## Performance Considerations
 
-- **Response Time**: Typically 1-5 seconds depending on model and message length
-- **Token Limits**: Maximum 1024 tokens per response (configurable)
+- **Response Time**: 1-5 seconds (increases with longer responses)
+- **Token Limits**: Configurable from 512 to 8,192+ tokens
+- **Cost Impact**: Longer responses consume more AI credits
 - **Concurrent Requests**: Handled automatically by Cloudflare Workers
 - **Geographic Performance**: Responses are served from Cloudflare's global edge network
 
