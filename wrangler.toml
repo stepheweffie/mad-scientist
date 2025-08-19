@@ -1,0 +1,19 @@
+name = "mad-scientist"
+main = "src/worker.py"
+compatibility_flags = ["python_workers"]
+compatibility_date = "2024-01-15"
+
+# Environment variables
+[vars]
+APP_NAME = "Mad Scientist AI Chat"
+DEFAULT_MESSAGE = "What perplexes you today?"
+
+# Cloudflare Workers AI binding
+[ai]
+binding = "AI"
+
+# Optional: Add analytics binding for usage tracking
+# [analytics_engine_datasets]
+# [[analytics_engine_datasets.bindings]]
+# name = "ANALYTICS"
+# dataset = "mad_scientist_analytics"
