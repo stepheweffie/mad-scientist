@@ -10,17 +10,63 @@
 [![Docker](https://ghcr.io/stepheweffie/mad-scientist/badges/latest/size)](https://github.com/stepheweffie/mad-scientist/pkgs/container/mad-scientist)
 [![Release](https://img.shields.io/github/v/release/stepheweffie/mad-scientist)](https://github.com/stepheweffie/mad-scientist/releases)
 
-An open-source AI chat interface with avatar generation, built as a guard railing project to promote responsible AI development and community collaboration.
+An open-source AI chat interface with avatar generation and integrated user authentication, built as a guard railing project to promote responsible AI development and community collaboration.
 
 ## ✨ Features
 
 - 🤖 **Multi-Model AI Chat**: Support for multiple language models (Mistral-7B, Hermes 2 Pro)
 - 🎨 **AI Avatar Generation**: Create custom avatars with Dreamshaper-8 LCM
+- 🔐 **User Authentication**: Complete Flask-based user system with login, registration, and JWT tokens
 - 🔒 **Responsible AI**: Built-in guard rails for scientific accuracy and disambiguation
 - 📊 **Comprehensive Logging**: Detailed logging system with rotating files
-- 🔧 **Easy Deployment**: Ready for Digital Ocean App Platform
+- 🏗️ **Microservices Architecture**: Integrated Flask auth service with FastAPI chat service
+- 🌐 **Nginx Reverse Proxy**: Production-ready load balancing and SSL termination
+- 🔧 **Easy Deployment**: Multiple deployment options with Docker Compose
 - ⚡ **FastAPI Backend**: High-performance async Python web framework
 - 🎯 **Session Management**: Persistent chat sessions with state tracking
+
+## 🔐 User Authentication System
+
+Mad Scientist AI now includes a complete user authentication system built with Flask:
+
+### 🔑 Authentication Features
+- **User Registration**: Create new accounts with email verification
+- **Secure Login**: Password hashing with bcrypt
+- **JWT Tokens**: Stateless authentication with JSON Web Tokens
+- **Session Management**: Secure session handling across services
+- **Password Reset**: Email-based password recovery
+- **Account Management**: User profile and settings management
+
+### 🏗️ Microservices Architecture
+
+The application uses a microservices architecture with three main components:
+
+**Flask Authentication Service** (`flask-user-system/`):
+- User registration and login
+- JWT token generation and validation
+- Password management
+- User profile management
+- SQLite database for user data
+
+**FastAPI Chat Service** (main application):
+- AI chat interface
+- Avatar generation
+- Chat session management
+- Integration with Cloudflare AI models
+
+**Nginx Reverse Proxy**:
+- Routes `/auth/*` to Flask service
+- Routes all other requests to FastAPI service
+- SSL termination and load balancing
+- Static file serving
+
+### 🔗 Service Communication
+
+Services communicate securely using:
+- **JWT Token Validation**: FastAPI validates tokens issued by Flask
+- **Internal Network**: Docker network isolation
+- **Environment Variables**: Shared configuration
+- **Health Checks**: Service availability monitoring
 
 ## 🚀 Quick Start
 
@@ -56,12 +102,25 @@ An open-source AI chat interface with avatar generation, built as a guard railin
    ```
 
 5. **Run the application**
+   
+   **Option A: FastAPI only (development)**
    ```bash
    uvicorn main:app --host 0.0.0.0 --port 8000 --reload
    ```
+   
+   **Option B: Full integrated system (recommended)**
+   ```bash
+   # Set up environment variables for authentication
+   export SECRET_KEY="your-secret-key"
+   export JWT_SECRET_KEY="your-jwt-secret-key"
+   
+   # Deploy all services with Docker Compose
+   docker-compose -f docker-compose.integrated.yml up --build
+   ```
 
 6. **Open your browser**
-   Navigate to `http://localhost:8000`
+   - FastAPI only: Navigate to `http://localhost:8000`
+   - Integrated system: Navigate to `http://localhost` (Nginx proxy)
 
 ## ⚙️ Configuration
 
@@ -104,16 +163,31 @@ LOG_LEVEL=INFO  # Options: DEBUG, INFO, WARNING, ERROR, CRITICAL
 
 ```
 mad-scientist/
-├── main.py              # FastAPI application and routes
-├── mad_scientist.py     # Core AI interaction logic
-├── logging_config.py    # Logging configuration
-├── static.py           # CSS styles
-├── templates/          # HTML templates
-│   └── chat.html       # Chat interface template
-├── requirements.txt    # Python dependencies
-├── .env.example       # Environment configuration template
-├── Dockerfile         # Container configuration
-└── logs/              # Application logs (created at runtime)
+├── main.py                        # FastAPI application and routes
+├── mad_scientist.py               # Core AI interaction logic
+├── logging_config.py              # Logging configuration
+├── static.py                     # CSS styles
+├── templates/                    # HTML templates
+│   └── chat.html                # Chat interface template
+├── flask-user-system/            # Flask authentication service
+│   ├── login_app/               # Flask application package
+│   │   ├── __init__.py          # Flask app factory
+│   │   ├── auth.py              # Authentication routes
+│   │   ├── config.py            # Configuration management
+│   │   ├── forms.py             # WTForms for user input
+│   │   ├── models.py            # User database models
+│   │   ├── templates/           # Flask HTML templates
+│   │   └── user.py              # User management logic
+│   ├── data/                    # SQLite database storage
+│   ├── dockerfile               # Flask service container
+│   ├── requirements.txt         # Flask dependencies
+│   └── wsgi.py                  # WSGI entry point
+├── docker-compose.integrated.yml # Multi-service deployment
+├── nginx.conf                   # Reverse proxy configuration
+├── requirements.txt             # FastAPI dependencies
+├── .env.example                # Environment configuration template
+├── Dockerfile                  # FastAPI container configuration
+└── logs/                       # Application logs (created at runtime)
 ```
 
 ## 🤖 Available AI Models
