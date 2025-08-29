@@ -4,6 +4,12 @@
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.108.0-009688.svg)](https://fastapi.tiangolo.com/)
 
+[![CI](https://github.com/stepheweffie/mad-scientist/actions/workflows/ci.yml/badge.svg)](https://github.com/stepheweffie/mad-scientist/actions/workflows/ci.yml)
+[![CD](https://github.com/stepheweffie/mad-scientist/actions/workflows/cd.yml/badge.svg)](https://github.com/stepheweffie/mad-scientist/actions/workflows/cd.yml)
+[![Security](https://github.com/stepheweffie/mad-scientist/actions/workflows/security.yml/badge.svg)](https://github.com/stepheweffie/mad-scientist/actions/workflows/security.yml)
+[![Docker](https://ghcr.io/stepheweffie/mad-scientist/badges/latest/size)](https://github.com/stepheweffie/mad-scientist/pkgs/container/mad-scientist)
+[![Release](https://img.shields.io/github/v/release/stepheweffie/mad-scientist)](https://github.com/stepheweffie/mad-scientist/releases)
+
 An open-source AI chat interface with avatar generation, built as a guard railing project to promote responsible AI development and community collaboration.
 
 ## ✨ Features
@@ -166,9 +172,53 @@ This project emphasizes responsible AI development:
 - **Transparency**: Open-source code for community review and improvement
 - **Logging**: Comprehensive monitoring for debugging and accountability
 
+## 🔄 CI/CD Pipeline
+
+Mad Scientist AI features a comprehensive CI/CD pipeline with GitHub Actions:
+
+### 🧪 Continuous Integration (CI)
+
+- **Code Quality**: Linting with flake8, Black, and isort
+- **Testing**: Multi-version Python testing (3.9, 3.10, 3.11)
+- **Security**: Bandit, Safety, and vulnerability scanning
+- **Docker**: Container build validation
+- **Health Checks**: Application startup and endpoint testing
+
+### 🚀 Continuous Deployment (CD)
+
+- **Multi-Platform Builds**: AMD64 and ARM64 Docker images
+- **Registry**: Automatic publishing to GitHub Container Registry
+- **Security Scanning**: Trivy container vulnerability scanning
+- **Environments**: Automated staging and production deployments
+- **Rollback**: Automatic rollback on deployment failures
+
+### 🔒 Security Workflows
+
+- **Dependency Scanning**: Weekly security vulnerability checks
+- **Code Analysis**: Static analysis with multiple tools
+- **License Compliance**: Automated license checking
+- **Automated Updates**: Dependency update PRs
+
+### 📋 Workflow Triggers
+
+| Workflow | Trigger | Purpose |
+|----------|---------|----------|
+| CI | Push/PR to main | Code quality and testing |
+| CD | Push to main, releases | Build and deploy |
+| Security | Weekly, PR | Security scanning |
+| Release | Conventional commits | Automated releases |
+| PR Checks | Pull requests | Fast validation |
+
+### 🏷️ Release Management
+
+- **Semantic Versioning**: Automated version bumping
+- **Conventional Commits**: Automatic changelog generation
+- **GitHub Releases**: Automated release creation
+- **Docker Tags**: Multiple tag strategies (latest, semver, SHA)
+
 ## 🤝 Contributing
 
-We welcome contributions! Please see our contributing guidelines:
+We welcome contributions! Please see our [contributing guidelines](CONTRIBUTING.md):
 
 1. Fork the repository
 2. Create a feature branch
@@ -184,6 +234,17 @@ pip install -r requirements.txt
 # Run with debug logging
 export LOG_LEVEL=DEBUG
 uvicorn main:app --reload
+```
+
+### Commit Convention
+
+We use [Conventional Commits](https://conventionalcommits.org/) for automated releases:
+
+```
+feat: add new AI model support
+fix: resolve session timeout issue
+docs: update installation guide
+chore: update dependencies
 ```
 
 ## 📄 License

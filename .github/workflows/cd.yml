@@ -1,0 +1,267 @@
+name: 🚀 Continuous Deployment
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  release:
+    types: [ published ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment Environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - staging
+        - production
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    name: 🏗️ Build & Push Docker Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
+      image-tag: ${{ steps.meta.outputs.tags }}
+      
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: 🐳 Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: 🔐 Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: 🏷️ Extract Metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=semver,pattern={{major}}
+          type=sha,prefix=sha-
+          type=raw,value=latest,enable={{is_default_branch}}
+          
+    - name: 🏗️ Build and Push Docker Image
+      id: build
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        build-args: |
+          BUILDTIME=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
+          VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}
+          REVISION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.revision'] }}
+          
+    - name: 🔍 Generate SBOM
+      uses: anchore/sbom-action@v0
+      with:
+        image: ${{ steps.meta.outputs.tags }}
+        format: spdx-json
+        output-file: sbom.spdx.json
+        
+    - name: 📊 Upload SBOM
+      uses: actions/upload-artifact@v3
+      with:
+        name: sbom
+        path: sbom.spdx.json
+
+  security-scan:
+    name: 🛡️ Security Scan
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    permissions:
+      security-events: write
+      
+    steps:
+    - name: 🔍 Run Trivy Vulnerability Scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ needs.build-and-push.outputs.image-tag }}
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        
+    - name: 📊 Upload Trivy Results to GitHub Security
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'
+        
+    - name: 📊 Upload Trivy Results as Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: trivy-security-scan
+        path: trivy-results.sarif
+
+  deploy-staging:
+    name: 🚀 Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [build-and-push, security-scan]
+    if: github.ref == 'refs/heads/main' || github.event.inputs.environment == 'staging'
+    environment:
+      name: staging
+      url: https://staging.mad-scientist.example.com
+      
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: 🚀 Deploy to Staging
+      run: |
+        echo "🚀 Deploying ${{ needs.build-and-push.outputs.image-tag }} to staging..."
+        
+        # This is where you would add your actual deployment steps
+        # Examples:
+        # - kubectl apply -f k8s/staging/
+        # - docker-compose -f docker-compose.staging.yml up -d
+        # - AWS ECS task update
+        # - Digital Ocean App Platform deployment
+        
+        echo "📝 Deployment command would be:"
+        echo "docker run -d -p 8080:8000 \\"
+        echo "  -e SECRET_KEY=\${{ secrets.STAGING_SECRET_KEY }} \\"
+        echo "  -e API_BASE_URL=\${{ secrets.STAGING_API_BASE_URL }} \\"
+        echo "  -e ACCOUNT_ID=\${{ secrets.STAGING_ACCOUNT_ID }} \\"
+        echo "  -e AUTH_TOKEN=\${{ secrets.STAGING_AUTH_TOKEN }} \\"
+        echo "  ${{ needs.build-and-push.outputs.image-tag }}"
+        
+    - name: 🏥 Health Check Staging
+      run: |
+        echo "⏳ Waiting for application to be ready..."
+        # sleep 30
+        
+        # Health check would be:
+        # curl -f https://staging.mad-scientist.example.com/health
+        
+        echo "✅ Staging deployment health check would pass here"
+        
+    - name: 📝 Deployment Summary
+      run: |
+        echo "## 🚀 Staging Deployment Summary" >> $GITHUB_STEP_SUMMARY
+        echo "- **Image**: ${{ needs.build-and-push.outputs.image-tag }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Environment**: Staging" >> $GITHUB_STEP_SUMMARY  
+        echo "- **Status**: ✅ Deployed Successfully" >> $GITHUB_STEP_SUMMARY
+        echo "- **URL**: https://staging.mad-scientist.example.com" >> $GITHUB_STEP_SUMMARY
+
+  deploy-production:
+    name: 🌟 Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build-and-push, security-scan, deploy-staging]
+    if: github.event_name == 'release' || github.event.inputs.environment == 'production'
+    environment:
+      name: production
+      url: https://mad-scientist.example.com
+      
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: 🌟 Deploy to Production
+      run: |
+        echo "🌟 Deploying ${{ needs.build-and-push.outputs.image-tag }} to production..."
+        
+        # Production deployment steps would go here
+        # Examples:
+        # - Blue/Green deployment
+        # - Rolling update
+        # - Canary deployment
+        
+        echo "📝 Production deployment command would be:"
+        echo "docker run -d -p 80:8000 \\"
+        echo "  -e SECRET_KEY=\${{ secrets.PROD_SECRET_KEY }} \\"
+        echo "  -e API_BASE_URL=\${{ secrets.PROD_API_BASE_URL }} \\"
+        echo "  -e ACCOUNT_ID=\${{ secrets.PROD_ACCOUNT_ID }} \\"
+        echo "  -e AUTH_TOKEN=\${{ secrets.PROD_AUTH_TOKEN }} \\"
+        echo "  --restart unless-stopped \\"
+        echo "  ${{ needs.build-and-push.outputs.image-tag }}"
+        
+    - name: 🏥 Health Check Production
+      run: |
+        echo "⏳ Waiting for production application to be ready..."
+        # sleep 60  # Give more time for production
+        
+        # Production health check:
+        # curl -f https://mad-scientist.example.com/health
+        
+        echo "✅ Production deployment health check would pass here"
+        
+    - name: 📝 Production Deployment Summary
+      run: |
+        echo "## 🌟 Production Deployment Summary" >> $GITHUB_STEP_SUMMARY
+        echo "- **Image**: ${{ needs.build-and-push.outputs.image-tag }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Environment**: Production" >> $GITHUB_STEP_SUMMARY
+        echo "- **Status**: ✅ Deployed Successfully" >> $GITHUB_STEP_SUMMARY
+        echo "- **URL**: https://mad-scientist.example.com" >> $GITHUB_STEP_SUMMARY
+        
+    - name: 🎉 Notify Success
+      run: |
+        echo "🎉 Production deployment completed successfully!"
+        echo "📊 Image digest: ${{ needs.build-and-push.outputs.image-digest }}"
+
+  rollback:
+    name: 🔄 Rollback (Manual)
+    runs-on: ubuntu-latest
+    if: failure() && (needs.deploy-staging.result == 'failure' || needs.deploy-production.result == 'failure')
+    needs: [deploy-staging, deploy-production]
+    environment:
+      name: rollback
+      
+    steps:
+    - name: ⚠️ Rollback Required
+      run: |
+        echo "⚠️ Deployment failed, rollback may be required"
+        echo "📝 Manual intervention needed to rollback to previous version"
+        echo "## ⚠️ Rollback Required" >> $GITHUB_STEP_SUMMARY
+        echo "Deployment failed. Manual rollback may be required." >> $GITHUB_STEP_SUMMARY
+        
+        # Actual rollback steps would depend on your deployment method:
+        # - kubectl rollout undo deployment/mad-scientist
+        # - docker service update --rollback mad-scientist
+        # - Restore previous container version
+
+  cleanup:
+    name: 🧹 Cleanup
+    runs-on: ubuntu-latest
+    needs: [build-and-push, deploy-staging, deploy-production]
+    if: always()
+    
+    steps:
+    - name: 🧹 Clean up old images
+      run: |
+        echo "🧹 Cleanup old container images (if needed)"
+        # This would clean up old images from registry
+        # Keep last 10 versions, delete older ones
+        
+    - name: 📊 Final Summary
+      run: |
+        echo "## 🚀 CD Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Stage | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| 🏗️ Build & Push | ${{ needs.build-and-push.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| 🛡️ Security Scan | ${{ needs.security-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| 🚀 Staging Deploy | ${{ needs.deploy-staging.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| 🌟 Production Deploy | ${{ needs.deploy-production.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY

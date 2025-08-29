@@ -1,0 +1,321 @@
+name: 🚀 Release
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+        - patch
+        - minor
+        - major
+      prerelease:
+        description: 'Create pre-release'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  check-changes:
+    name: 🔍 Check for Release Changes
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
+      version_type: ${{ steps.check.outputs.version_type }}
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: 🔍 Check for Conventional Commits
+      id: check
+      run: |
+        # Get commits since last tag
+        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+        
+        if [ -z "$LAST_TAG" ]; then
+          echo "No previous tag found, creating initial release"
+          echo "should_release=true" >> $GITHUB_OUTPUT
+          echo "version_type=minor" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+        
+        # Get commit messages since last tag
+        COMMITS=$(git log --pretty=format:"%s" ${LAST_TAG}..HEAD)
+        
+        # Check for breaking changes
+        if echo "$COMMITS" | grep -E "(BREAKING CHANGE|!:|^[a-z]+!:)" > /dev/null; then
+          echo "Breaking changes detected"
+          echo "should_release=true" >> $GITHUB_OUTPUT
+          echo "version_type=major" >> $GITHUB_OUTPUT
+        # Check for new features
+        elif echo "$COMMITS" | grep -E "^feat(\(.+\))?:" > /dev/null; then
+          echo "New features detected"
+          echo "should_release=true" >> $GITHUB_OUTPUT
+          echo "version_type=minor" >> $GITHUB_OUTPUT
+        # Check for bug fixes
+        elif echo "$COMMITS" | grep -E "^fix(\(.+\))?:" > /dev/null; then
+          echo "Bug fixes detected"
+          echo "should_release=true" >> $GITHUB_OUTPUT
+          echo "version_type=patch" >> $GITHUB_OUTPUT
+        else
+          echo "No release-worthy changes found"
+          echo "should_release=false" >> $GITHUB_OUTPUT
+        fi
+        
+        # Override with manual input if provided
+        if [ "${{ github.event.inputs.version_type }}" != "" ]; then
+          echo "Manual version type override: ${{ github.event.inputs.version_type }}"
+          echo "should_release=true" >> $GITHUB_OUTPUT
+          echo "version_type=${{ github.event.inputs.version_type }}" >> $GITHUB_OUTPUT
+        fi
+
+  generate-changelog:
+    name: 📝 Generate Changelog
+    runs-on: ubuntu-latest
+    needs: check-changes
+    if: needs.check-changes.outputs.should_release == 'true'
+    outputs:
+      changelog: ${{ steps.changelog.outputs.changelog }}
+      version: ${{ steps.version.outputs.version }}
+      
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: 🏷️ Calculate Next Version
+      id: version
+      run: |
+        # Get the latest tag
+        LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+        echo "Latest tag: $LATEST_TAG"
+        
+        # Remove 'v' prefix and split version
+        VERSION=${LATEST_TAG#v}
+        IFS='.' read -r -a VERSION_PARTS <<< "$VERSION"
+        
+        MAJOR=${VERSION_PARTS[0]:-0}
+        MINOR=${VERSION_PARTS[1]:-0}
+        PATCH=${VERSION_PARTS[2]:-0}
+        
+        # Increment based on type
+        case "${{ needs.check-changes.outputs.version_type }}" in
+          major)
+            MAJOR=$((MAJOR + 1))
+            MINOR=0
+            PATCH=0
+            ;;
+          minor)
+            MINOR=$((MINOR + 1))
+            PATCH=0
+            ;;
+          patch)
+            PATCH=$((PATCH + 1))
+            ;;
+        esac
+        
+        NEW_VERSION="v${MAJOR}.${MINOR}.${PATCH}"
+        echo "New version: $NEW_VERSION"
+        echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+        
+    - name: 📝 Generate Changelog
+      id: changelog
+      run: |
+        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+        NEW_VERSION="${{ steps.version.outputs.version }}"
+        
+        echo "# Changelog for $NEW_VERSION" > changelog.md
+        echo "" >> changelog.md
+        echo "**Release Date:** $(date +'%Y-%m-%d')" >> changelog.md
+        echo "" >> changelog.md
+        
+        if [ -z "$LAST_TAG" ]; then
+          echo "## 🎉 Initial Release" >> changelog.md
+          echo "" >> changelog.md
+          git log --pretty=format:"- %s (%h)" --reverse >> changelog.md
+        else
+          echo "## 🚀 Changes since $LAST_TAG" >> changelog.md
+          echo "" >> changelog.md
+          
+          # Features
+          FEATURES=$(git log --pretty=format:"%s (%h)" ${LAST_TAG}..HEAD | grep -E "^feat(\(.+\))?:" | sed 's/^feat[^:]*: /- ✨ /' || true)
+          if [ -n "$FEATURES" ]; then
+            echo "### ✨ New Features" >> changelog.md
+            echo "$FEATURES" >> changelog.md
+            echo "" >> changelog.md
+          fi
+          
+          # Bug Fixes
+          FIXES=$(git log --pretty=format:"%s (%h)" ${LAST_TAG}..HEAD | grep -E "^fix(\(.+\))?:" | sed 's/^fix[^:]*: /- 🐛 /' || true)
+          if [ -n "$FIXES" ]; then
+            echo "### 🐛 Bug Fixes" >> changelog.md
+            echo "$FIXES" >> changelog.md
+            echo "" >> changelog.md
+          fi
+          
+          # Breaking Changes
+          BREAKING=$(git log --pretty=format:"%s (%h)" ${LAST_TAG}..HEAD | grep -E "(BREAKING CHANGE|!:|^[a-z]+!:)" | sed 's/^[^:]*: /- ⚠️ /' || true)
+          if [ -n "$BREAKING" ]; then
+            echo "### ⚠️ BREAKING CHANGES" >> changelog.md
+            echo "$BREAKING" >> changelog.md
+            echo "" >> changelog.md
+          fi
+          
+          # Other Changes
+          OTHER=$(git log --pretty=format:"%s (%h)" ${LAST_TAG}..HEAD | grep -v -E "^(feat|fix)(\(.+\))?:" | grep -v -E "(BREAKING CHANGE|!:|^[a-z]+!:)" | sed 's/^/- 📝 /' || true)
+          if [ -n "$OTHER" ]; then
+            echo "### 📝 Other Changes" >> changelog.md
+            echo "$OTHER" >> changelog.md
+            echo "" >> changelog.md
+          fi
+        fi
+        
+        echo "## 🐳 Docker Images" >> changelog.md
+        echo "" >> changelog.md
+        echo "- \`ghcr.io/${{ github.repository }}:$NEW_VERSION\`" >> changelog.md
+        echo "- \`ghcr.io/${{ github.repository }}:latest\`" >> changelog.md
+        echo "" >> changelog.md
+        
+        echo "## 📦 Installation" >> changelog.md
+        echo "" >> changelog.md
+        echo "\`\`\`bash" >> changelog.md
+        echo "# Docker" >> changelog.md
+        echo "docker run -p 8000:8000 ghcr.io/${{ github.repository }}:$NEW_VERSION" >> changelog.md
+        echo "" >> changelog.md
+        echo "# Git" >> changelog.md
+        echo "git clone https://github.com/${{ github.repository }}.git" >> changelog.md
+        echo "cd mad-scientist" >> changelog.md
+        echo "git checkout $NEW_VERSION" >> changelog.md
+        echo "\`\`\`" >> changelog.md
+        
+        # Read changelog into output
+        CHANGELOG_CONTENT=$(cat changelog.md)
+        echo "changelog<<EOF" >> $GITHUB_OUTPUT
+        echo "$CHANGELOG_CONTENT" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+        
+    - name: 📊 Upload Changelog
+      uses: actions/upload-artifact@v3
+      with:
+        name: changelog
+        path: changelog.md
+
+  create-release:
+    name: 🏷️ Create Release
+    runs-on: ubuntu-latest
+    needs: [check-changes, generate-changelog]
+    if: needs.check-changes.outputs.should_release == 'true'
+    permissions:
+      contents: write
+      
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: 🏷️ Create Git Tag
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+        NEW_VERSION="${{ needs.generate-changelog.outputs.version }}"
+        
+        git tag -a $NEW_VERSION -m "Release $NEW_VERSION"
+        git push origin $NEW_VERSION
+        
+    - name: 📝 Create GitHub Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ needs.generate-changelog.outputs.version }}
+        release_name: ${{ needs.generate-changelog.outputs.version }}
+        body: ${{ needs.generate-changelog.outputs.changelog }}
+        draft: false
+        prerelease: ${{ github.event.inputs.prerelease == 'true' }}
+        
+    - name: 📊 Release Summary
+      run: |
+        echo "## 🎉 Release Created" >> $GITHUB_STEP_SUMMARY
+        echo "- **Version**: ${{ needs.generate-changelog.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Type**: ${{ needs.check-changes.outputs.version_type }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Prerelease**: ${{ github.event.inputs.prerelease == 'true' }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **URL**: https://github.com/${{ github.repository }}/releases/tag/${{ needs.generate-changelog.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+
+  update-documentation:
+    name: 📚 Update Documentation
+    runs-on: ubuntu-latest
+    needs: [generate-changelog, create-release]
+    permissions:
+      contents: write
+      
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        ref: main
+        
+    - name: 📝 Update README with Latest Version
+      run: |
+        NEW_VERSION="${{ needs.generate-changelog.outputs.version }}"
+        
+        # Update version badge in README
+        sed -i "s/mad-scientist:v[0-9]\+\.[0-9]\+\.[0-9]\+/mad-scientist:$NEW_VERSION/g" README.md || true
+        sed -i "s/tag\/v[0-9]\+\.[0-9]\+\.[0-9]\+/tag\/$NEW_VERSION/g" README.md || true
+        
+    - name: 📝 Update CHANGELOG.md
+      run: |
+        if [ ! -f CHANGELOG.md ]; then
+          echo "# Changelog" > CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "All notable changes to this project will be documented in this file." >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+        fi
+        
+        # Prepend new changelog entry
+        cp CHANGELOG.md CHANGELOG.md.tmp
+        echo "${{ needs.generate-changelog.outputs.changelog }}" > CHANGELOG.md
+        echo "" >> CHANGELOG.md
+        echo "---" >> CHANGELOG.md
+        echo "" >> CHANGELOG.md
+        cat CHANGELOG.md.tmp | tail -n +4 >> CHANGELOG.md
+        rm CHANGELOG.md.tmp
+        
+    - name: 🚀 Commit Documentation Updates
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+        git add README.md CHANGELOG.md
+        if git diff --staged --quiet; then
+          echo "No documentation changes to commit"
+        else
+          git commit -m "docs: update documentation for ${{ needs.generate-changelog.outputs.version }}"
+          git push
+        fi
+
+  notify:
+    name: 📢 Notify Release
+    runs-on: ubuntu-latest
+    needs: [generate-changelog, create-release, update-documentation]
+    if: always() && needs.create-release.result == 'success'
+    
+    steps:
+    - name: 🎉 Release Success Notification
+      run: |
+        echo "🎉 Successfully released ${{ needs.generate-changelog.outputs.version }}!"
+        echo "📝 Release notes and Docker images are now available."
+        echo "🔗 Release URL: https://github.com/${{ github.repository }}/releases/tag/${{ needs.generate-changelog.outputs.version }}"

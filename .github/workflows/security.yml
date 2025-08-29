@@ -1,0 +1,358 @@
+name: 🔒 Security & Dependencies
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  schedule:
+    - cron: '0 0 * * 1'  # Weekly on Mondays
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  dependency-scan:
+    name: 🔍 Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+      
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: 📦 Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install safety bandit semgrep
+        
+    - name: 🛡️ Run Safety Check
+      run: |
+        safety check --json --output safety-report.json || true
+        safety check --short-report || true
+        
+    - name: 📊 Upload Safety Report
+      uses: actions/upload-artifact@v3
+      with:
+        name: safety-vulnerability-report
+        path: safety-report.json
+        
+    - name: 🔒 Run Bandit Security Scan
+      run: |
+        bandit -r . -f json -o bandit-report.json || true
+        bandit -r . -f txt || true
+        
+    - name: 📊 Upload Bandit Report
+      uses: actions/upload-artifact@v3
+      with:
+        name: bandit-security-report
+        path: bandit-report.json
+        
+    - name: 🔍 Run Semgrep Scan
+      run: |
+        semgrep --config=auto --json --output=semgrep-report.json . || true
+        semgrep --config=auto . || true
+        
+    - name: 📊 Upload Semgrep Report
+      uses: actions/upload-artifact@v3
+      with:
+        name: semgrep-security-report
+        path: semgrep-report.json
+
+  code-quality:
+    name: 📊 Code Quality Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+      
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: 📦 Install Code Quality Tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pylint mypy radon xenon
+        
+    - name: 🔍 Run Pylint
+      run: |
+        pylint --output-format=json --reports=y . > pylint-report.json || true
+        pylint --reports=y . || true
+        
+    - name: 📊 Upload Pylint Report
+      uses: actions/upload-artifact@v3
+      with:
+        name: pylint-report
+        path: pylint-report.json
+        
+    - name: 🎯 Run MyPy Type Checking
+      run: |
+        mypy --json-report mypy-report . || true
+        mypy . || true
+        
+    - name: 📊 Upload MyPy Report
+      uses: actions/upload-artifact@v3
+      with:
+        name: mypy-report
+        path: mypy-report/
+        
+    - name: 📈 Run Complexity Analysis
+      run: |
+        radon cc . --json > complexity-report.json || true
+        radon cc . || true
+        xenon . --max-absolute A --max-modules A --max-average A || true
+        
+    - name: 📊 Upload Complexity Report
+      uses: actions/upload-artifact@v3
+      with:
+        name: complexity-report
+        path: complexity-report.json
+
+  snyk-scan:
+    name: 🐍 Snyk Vulnerability Scan
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+      
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: 🔍 Run Snyk to check for vulnerabilities
+      uses: snyk/actions/python@master
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        args: --severity-threshold=medium --json-file-output=snyk-report.json
+      continue-on-error: true
+      
+    - name: 📊 Upload Snyk Report to GitHub Code Scanning
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: snyk.sarif
+      if: always()
+      continue-on-error: true
+      
+    - name: 📊 Upload Snyk Report Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: snyk-vulnerability-report
+        path: snyk-report.json
+      if: always()
+
+  docker-security:
+    name: 🐳 Docker Security Scan
+    runs-on: ubuntu-latest
+    if: github.event_name != 'schedule'
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: 🐳 Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: 🏗️ Build Docker Image for Scanning
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        load: true
+        tags: mad-scientist:security-scan
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        
+    - name: 🔍 Run Trivy Vulnerability Scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'mad-scientist:security-scan'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        
+    - name: 📊 Upload Trivy Results to GitHub Security
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'
+        
+    - name: 🔍 Run Trivy for JSON Report
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'mad-scientist:security-scan'
+        format: 'json'
+        output: 'trivy-results.json'
+        
+    - name: 📊 Upload Trivy JSON Report
+      uses: actions/upload-artifact@v3
+      with:
+        name: trivy-container-scan
+        path: trivy-results.json
+        
+    - name: 🔍 Scan for Secrets in Docker Image
+      run: |
+        docker run --rm -v "$(pwd)":/src:ro returntocorp/semgrep:latest \
+          --config=p/secrets --json --output=docker-secrets.json /src || true
+          
+    - name: 📊 Upload Docker Secrets Report
+      uses: actions/upload-artifact@v3
+      with:
+        name: docker-secrets-report
+        path: docker-secrets.json
+
+  license-check:
+    name: 📜 License Compliance Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: 📦 Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pip-licenses
+        
+    - name: 📜 Generate License Report
+      run: |
+        pip-licenses --format=json --output-file=licenses.json
+        pip-licenses --format=markdown --output-file=licenses.md
+        pip-licenses
+        
+    - name: 📊 Upload License Reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: license-reports
+        path: |
+          licenses.json
+          licenses.md
+
+  dependency-update:
+    name: 🔄 Dependency Update Check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    permissions:
+      contents: write
+      pull-requests: write
+      
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: 📦 Install pip-tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install pip-tools
+        
+    - name: 🔄 Update Dependencies
+      run: |
+        pip-compile --upgrade requirements.txt
+        
+    - name: 📝 Check for Changes
+      id: changes
+      run: |
+        if git diff --quiet requirements.txt; then
+          echo "changes=false" >> $GITHUB_OUTPUT
+        else
+          echo "changes=true" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: 🚀 Create Pull Request
+      if: steps.changes.outputs.changes == 'true'
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: 'chore: update dependencies'
+        title: '🔄 Automated Dependency Update'
+        body: |
+          ## 🔄 Automated Dependency Update
+          
+          This PR updates Python dependencies to their latest compatible versions.
+          
+          ### Changes
+          - Updated `requirements.txt` with latest compatible versions
+          - All security vulnerabilities should be addressed
+          
+          ### Verification
+          - [ ] All tests pass
+          - [ ] Security scans pass
+          - [ ] Application functions correctly
+          
+          This PR was created automatically by the scheduled dependency update workflow.
+        branch: dependency-updates
+        base: main
+
+  security-summary:
+    name: 📋 Security Summary
+    runs-on: ubuntu-latest
+    needs: [dependency-scan, code-quality, snyk-scan, docker-security, license-check]
+    if: always()
+    
+    steps:
+    - name: 📊 Generate Security Summary
+      run: |
+        echo "## 🔒 Security Scan Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| 🔍 Dependency Scan | ${{ needs.dependency-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| 📊 Code Quality | ${{ needs.code-quality.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| 🐍 Snyk Scan | ${{ needs.snyk-scan.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| 🐳 Docker Security | ${{ needs.docker-security.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| 📜 License Check | ${{ needs.license-check.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [[ "${{ needs.dependency-scan.result }}" == "success" && \
+              "${{ needs.code-quality.result }}" == "success" && \
+              "${{ needs.license-check.result }}" == "success" ]]; then
+          echo "✅ All security checks passed!" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "⚠️ Some security checks failed or were skipped. Please review the reports." >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📊 Available Reports" >> $GITHUB_STEP_SUMMARY
+        echo "- Safety vulnerability report" >> $GITHUB_STEP_SUMMARY
+        echo "- Bandit security report" >> $GITHUB_STEP_SUMMARY
+        echo "- Semgrep analysis report" >> $GITHUB_STEP_SUMMARY
+        echo "- Code quality and complexity reports" >> $GITHUB_STEP_SUMMARY
+        echo "- License compliance report" >> $GITHUB_STEP_SUMMARY
+        
+    - name: ✅ Security Checks Complete
+      if: needs.dependency-scan.result == 'success' && needs.code-quality.result == 'success' && needs.license-check.result == 'success'
+      run: echo "🛡️ All security checks completed successfully!"
+      
+    - name: ⚠️ Security Issues Found
+      if: needs.dependency-scan.result == 'failure' || needs.code-quality.result == 'failure'
+      run: |
+        echo "⚠️ Security issues detected. Please review the reports and address any findings."
+        exit 1
