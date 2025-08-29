@@ -55,32 +55,153 @@ async def model_api_name(model: str):
         model_name = mad_scientist.get_model_name_by_model(model=model)
         return model_name
 
-html_content = f"""
+html_content = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mad Scientist AI</title>
-    <style>{css_styles}</style>
+    <title>Mad Scientist AI - Model Selection</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>""" + css_styles + """</style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
 </head>
 <body>
-    <div class="centered form-containter">
-    <h1>Mad Scientist AI</h1>
-    <form action="/generate-avatar/" method="get">
-    <o>Language Model</p>
-    <select class="message custom-select input-element" id="modelName" name="brain_model" required>
-        {brain_options}
-    </select><br><br>
-    <o>Image Model</p>
-    <select class="message custom-select input-element" id="modelName" name="image_model" required>
-        {art_options}
-    </select><br>
-    <p>Image Prompt Input<p/>
-    <textarea class="chat-input" placeholder="A Mad Scientist" name="prompt" rows="4" cols="50"></textarea><br><br> <!-- Added textarea for entering text -->
-    <button class="input-element submit" type="submit">Experiment!</button>
-    </form>
+    <div class="centered form-containter animate__animated animate__fadeIn">
+        <h1>🧪 <span class="lab-title">Mad Scientist AI</span> 🧪</h1>
+        
+        <form action="/generate-avatar/" method="get" class="model-form">
+            <div class="input-group">
+                <label for="brain_model">Language Model</label>
+                <select class="custom-select input-element" id="brain_model" name="brain_model" required>
+""" + brain_options + """
+                </select>
+            </div>
+            
+            <div class="input-group">
+                <label for="image_model">Image Model</label>
+                <select class="custom-select input-element" id="image_model" name="image_model" required>
+""" + art_options + """
+                </select>
+            </div>
+            
+            <div class="input-group">
+                <label for="prompt">Avatar Prompt</label>
+                <textarea 
+                    class="input-element" 
+                    placeholder="A Mad Scientist" 
+                    name="prompt" 
+                    id="prompt"
+                    rows="4" 
+                    required
+                ></textarea>
+            </div>
+            
+            <button class="submit" type="submit" onclick="this.innerHTML='🧪 Experimenting...'; this.classList.add('loading');">🧪 Start Experiment!</button>
+        </form>
+        
+        <div class="lab-features">
+            <div class="feature-grid">
+                <div class="feature-item">
+                    <span class="feature-icon">🤖</span>
+                    <span>AI Models</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">🎨</span>
+                    <span>Custom Avatars</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">⚡</span>
+                    <span>Instant Results</span>
+                </div>
+            </div>
+        </div>
     </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {{
+            const promptInput = document.getElementById('prompt');
+            const submitButton = document.querySelector('.submit');
+            
+            // Auto-focus on prompt input
+            promptInput.focus();
+            
+            // Form validation
+            document.querySelector('.model-form').addEventListener('submit', function(e) {{
+                const brainModel = document.getElementById('brain_model').value;
+                const imageModel = document.getElementById('image_model').value;
+                const prompt = document.getElementById('prompt').value;
+                
+                if (!brainModel || !imageModel || !prompt.trim()) {{
+                    e.preventDefault();
+                    alert('Please fill in all fields before experimenting!');
+                    submitButton.innerHTML = '🧪 Start Experiment!';
+                    submitButton.classList.remove('loading');
+                }}
+            }});
+            
+            // Hover effects
+            document.querySelector('.form-containter').addEventListener('mouseenter', function() {{
+                this.style.transform = 'translate(-50%, -50%) scale(1.02)';
+            }});
+            
+            document.querySelector('.form-containter').addEventListener('mouseleave', function() {{
+                this.style.transform = 'translate(-50%, -50%) scale(1)';
+            }});
+        }});
+    </script>
+    
+    <style>
+        .model-form .input-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .model-form .input-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--glow-color);
+            font-weight: 500;
+        }
+        
+        .model-form textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .lab-features {
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--primary-color);
+        }
+        
+        .feature-grid {
+            display: flex;
+            justify-content: space-around;
+            gap: 1rem;
+        }
+        
+        .feature-item {
+            text-align: center;
+            padding: 0.5rem;
+            transition: transform 0.3s ease;
+        }
+        
+        .feature-item:hover {
+            transform: scale(1.1);
+        }
+        
+        .feature-icon {
+            display: block;
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .form-containter {
+            transition: all 0.3s ease;
+        }
+    </style>
 </body>
 </html>
 """
@@ -91,18 +212,138 @@ initial_html_content = f"""
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mad Scientist AI - Email Verification</title>
+    <title>Mad Scientist AI - Laboratory Access</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>{css_styles}</style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
 </head>
 <body>
     <div class="centered form-containter">
-    <h1>Mad Scientist AI</h1>
-    <form action="/verify-email/" method="post">
-    <p>Email Address</p>
-    <input class="input-element" type="email" name="email" required><br><br>
-    <button class="input-element submit" type="submit">Verify</button>
-    </form>
+        <h1>🧪 <span class="lab-title">Mad Scientist AI</span> 🧪</h1>
+        
+        <form action="/verify-email/" method="post" class="access-form">
+            <div class="input-group">
+                <label for="email">Email</label>
+                <input 
+                    class="input-element" 
+                    type="email" 
+                    name="email" 
+                    id="email"
+                    placeholder="Email address" 
+                    required
+                    autocomplete="email"
+                >
+            </div>
+            
+            <button 
+                class="submit" 
+                type="submit"
+                onclick="this.innerHTML='Loading...'; this.classList.add('loading');"
+            >
+                Continue
+            </button>
+        </form>
+        
+        <div class="lab-features">
+            <div class="feature-grid">
+                <div class="feature-item">
+                    <span class="feature-icon">🔮</span>
+                    <span>AI Oracle</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">✨</span>
+                    <span>Mystical Avatars</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">💫</span>
+                    <span>Arcane Magic</span>
+                </div>
+            </div>
+        </div>
     </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {{
+            const emailInput = document.getElementById('email');
+            const submitButton = document.querySelector('.submit');
+            
+            // Auto-focus on email input
+            emailInput.focus();
+            
+            // Enhanced form validation
+            emailInput.addEventListener('input', function() {{
+                const email = this.value;
+                if (email.includes('@') && email.includes('.')) {{
+                    this.style.borderColor = 'var(--glow-color)';
+                }} else {{
+                    this.style.borderColor = 'var(--primary-color)';
+                }}
+            }});
+            
+            // Add subtle scale effect on hover
+            document.querySelector('.form-containter').addEventListener('mouseenter', function() {{
+                this.style.transform = 'translate(-50%, -50%) scale(1.02)';
+            }});
+            
+            document.querySelector('.form-containter').addEventListener('mouseleave', function() {{
+                this.style.transform = 'translate(-50%, -50%) scale(1)';
+            }});
+        }});
+    </script>
+    
+    <style>
+        .lab-intro {{
+            margin-bottom: 2rem;
+            padding: 1rem;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--primary-color), var(--surface-color));
+        }}
+        
+        .input-group {{
+            margin-bottom: 1.5rem;
+        }}
+        
+        .input-group label {{
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--glow-color);
+            font-weight: 500;
+        }}
+        
+        .lab-features {{
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--primary-color);
+        }}
+        
+        .feature-grid {{
+            display: flex;
+            justify-content: space-around;
+            gap: 1rem;
+        }}
+        
+        .feature-item {{
+            text-align: center;
+            padding: 0.5rem;
+            transition: transform 0.3s ease;
+        }}
+        
+        .feature-item:hover {{
+            transform: scale(1.1);
+        }}
+        
+        .feature-icon {{
+            display: block;
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }}
+        
+        .form-containter {{
+            transition: all 0.3s ease;
+        }}
+    </style>
 </body>
 </html>
 """
@@ -137,33 +378,192 @@ async def generate_avatar(request: Request, brain_model: str = Query(None), imag
     <!DOCTYPE html>
     <html lang="en">
     <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mad Scientist AI</title>
-    <style>{css_styles}</style>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Mad Scientist AI - Avatar Created</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+        <style>{css_styles}</style>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
     </head>
     <body>
-    <div class="centered form-containter">
-    <div>
-    <img src={data_url}>
-    </div>
-    <center><h1>Mad Scientist AI</h1>
-    <div class="column">
-    <form action='/mad-scientist/' method="get">
-    <input type="hidden" name="brain_model" value="{brain_model}">
-    <input type="hidden" name="image_model" value="{image_model}">
-    <input type="hidden" name="prompt" value="{prompt}">
-    <button class="input-element avatar-button submit" type="submit">Save & Use</button>
-    </form>
-    </div>
-    <div class="column">
-    <form action='/generate-avatar/' method="get">
-    <button class="input-element avatar-button submit" type="submit">Regenerate</button>
-    </form>
-    </div>
-    </center>
-    </div>
-    </div>
+        <div class="centered form-containter animate__animated animate__zoomIn">
+            <h1 class="animate__animated animate__pulse animate__infinite">🧪 Mad Scientist AI 🧪</h1>
+            
+            <div class="avatar-showcase animate__animated animate__fadeInDown animate__delay-1s">
+                <div class="avatar-frame">
+                    <img src="{data_url}" alt="Generated Mad Scientist Avatar" class="generated-avatar animate__animated animate__bounceIn animate__delay-2s">
+                </div>
+                <p class="avatar-success animate__animated animate__fadeInUp animate__delay-3s">
+                    🎉 Your Mad Scientist Avatar is Ready! 🎉<br>
+                    <span style="font-size: 0.9rem; color: var(--text-muted);">Prompt: "{prompt}"</span>
+                </p>
+            </div>
+            
+            <div class="avatar-actions animate__animated animate__slideInUp animate__delay-4s">
+                <div class="action-buttons">
+                    <form action='/mad-scientist/' method="get" style="display: inline-block;">
+                        <input type="hidden" name="brain_model" value="{brain_model}">
+                        <input type="hidden" name="image_model" value="{image_model}">
+                        <input type="hidden" name="prompt" value="{prompt}">
+                        <button 
+                            class="submit avatar-button animate__animated animate__pulse animate__infinite" 
+                            type="submit"
+                            style="background: linear-gradient(135deg, var(--secondary-color), var(--glow-color)); margin-right: 1rem;"
+                            onclick="this.innerHTML='🚀 Launching Chat...'; this.classList.add('loading');"
+                        >
+                            ✨ Save & Use Avatar ✨
+                        </button>
+                    </form>
+                    
+                    <form action='/generate-avatar/' method="get" style="display: inline-block;">
+                        <input type="hidden" name="brain_model" value="{brain_model}">
+                        <input type="hidden" name="image_model" value="{image_model}">
+                        <input type="hidden" name="prompt" value="{prompt}">
+                        <button 
+                            class="submit avatar-button" 
+                            type="submit"
+                            style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color))"
+                            onclick="this.innerHTML='🎲 Generating...'; this.classList.add('loading');"
+                        >
+                            🔄 Try Again
+                        </button>
+                    </form>
+                </div>
+                
+                <div class="model-info animate__animated animate__fadeInUp animate__delay-5s">
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="info-label">🤖 Brain Model:</span>
+                            <span class="info-value">{brain_model}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">🎨 Image Model:</span>
+                            <span class="info-value">{image_model}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {{
+                const avatar = document.querySelector('.generated-avatar');
+                
+                avatar.addEventListener('mouseenter', function() {{
+                    this.style.transform = 'scale(1.1) rotate(5deg)';
+                }});
+                
+                avatar.addEventListener('mouseleave', function() {{
+                    this.style.transform = 'scale(1) rotate(0deg)';
+                }});
+                
+                document.querySelectorAll('.avatar-button').forEach(button => {{
+                    button.addEventListener('mouseenter', function() {{
+                        this.style.animation = 'bounce 0.6s ease';
+                    }});
+                }});
+            }});
+        </script>
+        
+        <style>
+            .avatar-showcase {
+                text-align: center;
+                margin: 2rem 0;
+            }
+            
+            .avatar-frame {
+                display: inline-block;
+                padding: 10px;
+                border: 3px solid var(--glow-color);
+                border-radius: 50%;
+                background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+                box-shadow: inset 0 0 20px var(--shadow-light);
+                margin-bottom: 1rem;
+            }
+            
+            .generated-avatar {
+                width: 200px;
+                height: 200px;
+                border-radius: 50%;
+                object-fit: cover;
+                transition: all 0.3s ease;
+                cursor: pointer;
+            }
+            
+            .avatar-success {
+                color: var(--glow-color);
+                font-size: 1.2rem;
+                font-weight: 600;
+                text-align: center;
+                margin-bottom: 2rem;
+            }
+            
+            .avatar-actions {
+                text-align: center;
+            }
+            
+            .action-buttons {
+                margin-bottom: 2rem;
+            }
+            
+            .avatar-button {
+                margin: 0.5rem;
+                padding: 15px 25px;
+                font-size: 1rem;
+                min-width: 200px;
+                transition: all 0.3s ease;
+            }
+            
+            .model-info {
+                background: linear-gradient(135deg, var(--primary-color), var(--surface-color));
+                padding: 1rem;
+                border-radius: 10px;
+                border-top: 1px solid var(--glow-color);
+            }
+            
+            .info-grid {
+                display: flex;
+                justify-content: space-around;
+                gap: 1rem;
+            }
+            
+            .info-item {
+                text-align: center;
+            }
+            
+            .info-label {
+                display: block;
+                color: var(--glow-color);
+                font-weight: 500;
+                margin-bottom: 0.5rem;
+            }
+            
+            .info-value {
+                color: var(--text-color);
+                font-size: 0.9rem;
+            }
+            
+            @media (max-width: 768px) {{
+                .action-buttons form {{
+                    display: block !important;
+                    margin: 0.5rem 0;
+                }}
+                
+                .avatar-button {{
+                    width: 100%;
+                    margin: 0.5rem 0;
+                }}
+                
+                .info-grid {{
+                    flex-direction: column;
+                    gap: 0.5rem;
+                }}
+            }}
+        </style>
+    </body>
+    </html>
     '''
     return HTMLResponse(content=avatar_page, status_code=200)
 
@@ -237,6 +637,29 @@ async def post_email(request: Request, email: str = Form(...)):
     )
     return response
 
+
+@app.get("/demo")
+async def demo(request: Request):
+    """Demo route that bypasses avatar generation for testing"""
+    logger.info("Demo route accessed")
+    try:
+        mad_scientist = MadScientist(request)
+        # Use a placeholder image instead of generating one
+        placeholder_avatar = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzQ3MzIzZCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTZweCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJjZW50cmFsIj5NYWQgU2NpZW50aXN0PC90ZXh0Pjwvc3ZnPg=="
+        durl['data_url'] = placeholder_avatar
+        
+        return templates.TemplateResponse("chat.html", {
+            "request": request,
+            "css_styles": css_styles,
+            "brain_model": "Demo Mode",
+            "app_name": app_name,
+            "message": "Demo chat without API",
+            "durl": placeholder_avatar,
+            "response": "Welcome to Mad Scientist AI! This is demo mode - the chat AI is not connected but you can see the interface.",
+        })
+    except Exception as e:
+        logger.error(f"Error in demo route: {str(e)}")
+        return HTMLResponse(content=f"<h1>Demo Error: {str(e)}</h1>", status_code=500)
 
 @app.get("/health")
 async def health_check():

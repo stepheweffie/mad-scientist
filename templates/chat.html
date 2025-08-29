@@ -1,46 +1,264 @@
 <!DOCTYPE html>
-    <html lang="en">
-    <head>
+<html lang="en">
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mad Scientist</title>
-    <style>{{css_styles | safe }}</style>	
-     </head>
-    <body>
+    <title>Mad Scientist AI - Chat Interface</title>
+    <!-- Google Fonts CDN -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>{{css_styles | safe}}</style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+</head>
+<body>
     <div class="container">
-    <div class="form-container">
-    <div>
-        <form action="/mad-scientist/" method="post">
-        <div class="message">Welcome to {{ app_name }} Chat! You are running {{ brain_model }}</div>
-        <textarea class="message-text" name="prompt" id="messageInput" rows="4" cols="50" placeholder="Chat here..."></textarea> 
-        <input type="hidden" name="brain_model" value="{{ brain_model }}">
-        <input type="hidden" name="image_model" value="{{ image_model }}">    
-        <button class="submit input-element">Send</button>
-        </form>
-    <div class="message">
-   <!-- Display the last user message here -->
-       
-            <div class="message last-user-message">
-                <span class="message-sender">You:</span>
-                <p class="message-text">{{ message }} </p>
+        <!-- Chat Input Section -->
+        <div class="form-container">
+            <div class="chat-header">
+                <h2>🧪 <span class="lab-title">Mad Scientist AI</span> 🧪</h2>
             </div>
-      
-    </div>
-    </div>
-    </div>
+            
+            <form action="/mad-scientist/" method="post" class="chat-form">
+                <div class="input-section">
+                    <label for="messageInput">Message</label>
+                    <textarea 
+                        class="message-text input-element" 
+                        name="prompt" 
+                        id="messageInput" 
+                        rows="4" 
+                        placeholder="Type your message here..." 
+                        required
+                    ></textarea>
+                    
+                    <input type="hidden" name="brain_model" value="{{ brain_model }}">
+                    <input type="hidden" name="image_model" value="{{ image_model }}">
+                    
+                    <button 
+                        type="submit" 
+                        class="submit"
+                        onclick="this.classList.add('loading')"
+                    >
+                        Send
+                    </button>
+                </div>
+            </form>
+            
+            <!-- Last User Message Display -->
+            <div class="user-message-section">
+                <div class="user-message-container">
+                    <span class="message-sender">You</span>
+                    <div class="user-message-content">{{ message }}</div>
+                </div>
+            </div>
+        </div>
 
-    <div class="chat-container">
-    <div class="message">
-    <span class="message-sender"> </span>
+        <!-- AI Response Section -->
+        <div class="chat-container">
+            <div class="ai-response-header">
+                <h3>Response</h3>
+            </div>
+            
+            <div class="ai-message">
+                <div class="avatar">
+                    <img src="{{ durl }}" id="avatarImage" alt="Mad Scientist Avatar" loading="lazy">
+                </div>
+                
+                <div class="response-content">
+                    <span class="message-sender">Mad Scientist AI</span>
+                    <div class="message-text">
+                        {{ response }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     
-    <div class="avatar">
-        <img src={{ durl }} id="avatarImage" alt="Generated Avatar">    
-    </div>
-    <p class="message-text">{{ response }}</p>
-    
-    </div>
-    </div>
-    
-    </div>
-    </body>
-    </html>
+    <script>
+        // Enhanced interactions
+        document.addEventListener('DOMContentLoaded', function() {
+            const messageInput = document.getElementById('messageInput');
+            const submitButton = document.querySelector('.submit');
+            const avatar = document.getElementById('avatarImage');
+            
+            // Auto-focus on message input
+            messageInput.focus();
+            
+            // Simple input validation
+            messageInput.addEventListener('input', function() {
+                // Input validation without animations
+            });
+            
+            // Avatar click interaction (simplified)
+            avatar.addEventListener('click', function() {
+                // Simple click handler without animations
+            });
+            
+            // Form submission enhancement
+            document.querySelector('.chat-form').addEventListener('submit', function(e) {
+                submitButton.innerHTML = 'Sending...';
+                submitButton.classList.add('loading');
+                
+                // Simple form submission
+                // No animations needed
+            });
+            
+            // Keyboard shortcuts
+            messageInput.addEventListener('keydown', function(e) {
+                if (e.ctrlKey && e.key === 'Enter') {
+                    document.querySelector('.chat-form').submit();
+                }
+            });
+        });
+        
+        // Clean styles without excessive animations
+        const style = document.createElement('style');
+        style.textContent = `
+            .chat-header {
+                margin-bottom: 2rem;
+                text-align: center;
+                border-bottom: 2px solid var(--border-color);
+                padding-bottom: 1rem;
+            }
+            
+            .chat-header h2 {
+                font-family: 'Poppins', sans-serif;
+                font-weight: 600;
+                color: var(--glow-color);
+                margin: 0;
+                font-size: 1.8rem;
+                letter-spacing: -0.02em;
+            }
+            
+            .input-section {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                margin-bottom: 1rem;
+            }
+            
+            .input-section label {
+                color: var(--glow-color);
+                font-size: 1rem;
+                margin-bottom: 0.5rem;
+                flex-shrink: 0;
+            }
+            
+            .input-section textarea {
+                flex: 1;
+                min-height: 200px;
+                resize: vertical;
+            }
+            
+            .input-section .submit {
+                margin-top: 1rem;
+                flex-shrink: 0;
+            }
+            
+            .user-message-section {
+                margin-top: auto;
+                padding-top: 1.5rem;
+                border-top: 2px solid var(--border-color);
+                flex-shrink: 0;
+            }
+            
+            .user-message-container {
+                background: var(--surface-light);
+                padding: 2rem;
+                border-radius: 12px;
+                border-left: 4px solid var(--glow-color);
+                box-shadow: none !important;
+                -webkit-box-shadow: none !important;
+                -moz-box-shadow: none !important;
+                text-align: left !important;
+                min-height: 180px;
+            }
+            
+            .user-message-container .message-sender {
+                color: var(--glow-color);
+                font-weight: 600;
+                margin-bottom: 0.5rem;
+                display: block;
+                text-align: left !important;
+            }
+            
+            .user-message-content {
+                background: none;
+                border: none;
+                padding: 0;
+                margin: 0;
+                color: var(--text-color);
+                line-height: 1.6;
+                word-wrap: break-word;
+                white-space: pre-wrap;
+                box-shadow: none !important;
+                text-align: left !important;
+            }
+            
+            .ai-response-header {
+                text-align: center;
+                border-bottom: 2px solid var(--border-color);
+                padding-bottom: 1rem;
+                margin-bottom: 1.5rem;
+            }
+            
+            .ai-response-header h3 {
+                font-family: 'Poppins', sans-serif;
+                font-weight: 600;
+                color: var(--glow-color);
+                margin: 0;
+                font-size: 1.8rem;
+                letter-spacing: -0.02em;
+            }
+            
+            .ai-message {
+                display: flex;
+                align-items: flex-start;
+                gap: 1rem;
+                flex: 1;
+            }
+            
+            .avatar {
+                flex-shrink: 0;
+                margin: 0;
+            }
+            
+            .avatar img {
+                width: 160px;
+                height: 160px;
+                object-fit: cover;
+                border-radius: 12px;
+            }
+            
+            .response-content {
+                flex: 1;
+                background: var(--surface-light);
+                padding: 0.75rem;
+                border-radius: 8px;
+                border-left: 3px solid var(--glow-color);
+                max-width: 70%;
+            }
+            
+            .response-content .message-sender {
+                color: var(--glow-color);
+                font-weight: 600;
+                margin-bottom: 0.25rem;
+                font-size: 0.9rem;
+            }
+            
+            .response-content .message-text {
+                background: none;
+                border: none;
+                padding: 0;
+                margin: 0;
+                min-height: auto;
+                line-height: 1.4;
+                white-space: pre-wrap;
+                color: var(--text-color);
+                font-size: 0.95rem;
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
