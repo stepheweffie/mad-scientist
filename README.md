@@ -129,7 +129,7 @@ mad-scientist/
 #### 🎨 Avatar Generation Example
 
 <div align="center">
-  <img src="assets/examples/mad-scientist-avatar-example.png" alt="Mad Scientist AI Avatar Example" width="300" style="border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);" />
+  <img src="assets/examples/mad-scientist-avatar-example.png" alt="Mad Scientist AI Avatar Example" width="300" style="border-radius: 8px;" />
   <br>
   <em>Example avatar generated with Dreamshaper-8 LCM</em>
 </div>
