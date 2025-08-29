@@ -137,8 +137,9 @@ jobs:
         # Examples:
         # - kubectl apply -f k8s/staging/
         # - docker-compose -f docker-compose.staging.yml up -d
+        # - Coolify API deployment
+        # - Railway/Render webhook deployment
         # - AWS ECS task update
-        # - Digital Ocean App Platform deployment
         
         echo "📝 Deployment command would be:"
         echo "docker run -d -p 8080:8000 \\"

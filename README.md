@@ -138,30 +138,220 @@ The application includes comprehensive logging:
 
 ## 🚀 Deployment
 
-### Digital Ocean App Platform
+Mad Scientist AI is designed for easy deployment across various platforms. Choose the method that best fits your infrastructure:
 
-1. Fork this repository to your GitHub account
-2. Visit the [Digital Ocean App Platform setup](https://cloud.digitalocean.com/apps/new?source_provider=github&i=8b9068)
-3. Connect your forked repository
-4. Add your environment variables in the Digital Ocean dashboard
-5. Deploy!
+### 🐳 Container Platforms (Recommended)
 
-### Docker
+#### Coolify
+[Coolify](https://coolify.io/) - Self-hosted alternative to Heroku/Netlify
 
+1. **Connect Repository**: Add your GitHub repository to Coolify
+2. **Configure Environment**: Set your environment variables in the Coolify dashboard:
+   ```
+   API_BASE_URL=your_cloudflare_api_url
+   ACCOUNT_ID=your_cloudflare_account_id
+   AUTH_TOKEN=your_cloudflare_api_token
+   SECRET_KEY=your_secret_key
+   LOG_LEVEL=INFO
+   ```
+3. **Deploy**: Coolify will automatically build and deploy using the included Dockerfile
+4. **Domain**: Configure your custom domain or use the provided subdomain
+
+#### Railway
+[Railway](https://railway.app/) - Modern deployment platform
+
+1. **Import Project**: Connect your GitHub repository
+2. **Environment Variables**: Add your configuration in Railway dashboard
+3. **Automatic Deployment**: Railway detects the Dockerfile and deploys automatically
+
+#### Render
+[Render](https://render.com/) - Cloud platform for developers
+
+1. **New Web Service**: Create from your GitHub repository
+2. **Docker Configuration**: Render automatically detects the Dockerfile
+3. **Environment Variables**: Configure in the Render dashboard
+4. **Custom Domain**: Add your domain and SSL is automatically configured
+
+### ☁️ Cloud Platforms
+
+#### Fly.io
+```bash
+# Install flyctl
+curl -L https://fly.io/install.sh | sh
+
+# Deploy
+fly launch
+fly secrets set API_BASE_URL="your_api_url" ACCOUNT_ID="your_account" AUTH_TOKEN="your_token" SECRET_KEY="your_secret"
+fly deploy
+```
+
+#### Google Cloud Run
+```bash
+# Build and push to Google Container Registry
+gcloud builds submit --tag gcr.io/PROJECT_ID/mad-scientist
+
+# Deploy to Cloud Run
+gcloud run deploy mad-scientist \
+  --image gcr.io/PROJECT_ID/mad-scientist \
+  --platform managed \
+  --region us-central1 \
+  --allow-unauthenticated \
+  --set-env-vars="API_BASE_URL=your_api_url,ACCOUNT_ID=your_account,SECRET_KEY=your_secret"
+```
+
+#### AWS App Runner
+```bash
+# Push to Amazon ECR and deploy via AWS Console or CLI
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ACCOUNT.dkr.ecr.us-east-1.amazonaws.com
+docker build -t mad-scientist .
+docker tag mad-scientist:latest ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/mad-scientist:latest
+docker push ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/mad-scientist:latest
+```
+
+### 🐳 Docker (Self-Hosted)
+
+#### Using Docker Compose (Recommended)
+```bash
+# Clone and configure
+git clone https://github.com/stepheweffie/mad-scientist.git
+cd mad-scientist
+cp .env.example .env
+# Edit .env with your configuration
+
+# Deploy with our management scripts
+./docker-scripts.sh prod
+```
+
+#### Docker with Custom Configuration
 ```bash
 # Build the image
 docker build -t mad-scientist .
 
-# Run the container
-docker run -p 8000:8000 --env-file .env mad-scientist
+# Run with environment file
+docker run -d \
+  --name mad-scientist \
+  -p 8000:8000 \
+  --env-file .env \
+  --restart unless-stopped \
+  mad-scientist
 ```
 
-### Manual Deployment
+#### Docker with Reverse Proxy
+```bash
+# Using Traefik labels (included in docker-compose.prod.yml)
+docker run -d \
+  --name mad-scientist \
+  --network traefik \
+  --label "traefik.enable=true" \
+  --label "traefik.http.routers.mad-scientist.rule=Host(\`your-domain.com\`)" \
+  --label "traefik.http.services.mad-scientist.loadbalancer.server.port=8000" \
+  --env-file .env \
+  mad-scientist
+```
 
-1. Set up your server with Python 3.8+
-2. Clone and configure the application
-3. Use a process manager like `systemd` or `supervisor`
-4. Set up a reverse proxy (nginx/Apache) for production
+### 🔧 VPS/Bare Metal
+
+#### Using Docker (Recommended)
+```bash
+# On your server
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+
+# Clone and deploy
+git clone https://github.com/stepheweffie/mad-scientist.git
+cd mad-scientist
+cp .env.example .env
+# Edit .env with your configuration
+
+# Deploy
+./docker-scripts.sh prod
+```
+
+#### Manual Python Deployment
+```bash
+# On your server (Ubuntu/Debian)
+sudo apt update && sudo apt install -y python3 python3-pip python3-venv nginx
+
+# Clone and setup
+git clone https://github.com/stepheweffie/mad-scientist.git
+cd mad-scientist
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your configuration
+
+# Run with process manager (systemd example)
+sudo tee /etc/systemd/system/mad-scientist.service > /dev/null <<EOF
+[Unit]
+Description=Mad Scientist AI
+After=network.target
+
+[Service]
+User=www-data
+WorkingDirectory=/path/to/mad-scientist
+Environment=PATH=/path/to/mad-scientist/venv/bin
+ExecStart=/path/to/mad-scientist/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl enable mad-scientist
+sudo systemctl start mad-scientist
+```
+
+### ⚙️ Configuration Notes
+
+#### Required Environment Variables
+```bash
+# Cloudflare AI API (Required)
+API_BASE_URL=https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/run/
+ACCOUNT_ID=your_cloudflare_account_id
+AUTH_TOKEN=your_cloudflare_api_token
+
+# Application Security (Required)
+SECRET_KEY=your-secure-random-secret-key
+
+# Optional Configuration
+LOG_LEVEL=INFO
+GTAG=your_google_analytics_tag
+PORT=8000
+```
+
+#### Health Check Endpoint
+All deployment platforms can use `/health` for health monitoring:
+```bash
+curl http://your-domain.com/health
+# Returns: {"status":"healthy","service":"Mad Scientist AI","version":"1.0.0"}
+```
+
+#### SSL/HTTPS
+- **Coolify, Railway, Render**: Automatic SSL certificates
+- **Cloud Platforms**: Built-in SSL termination
+- **Self-hosted**: Use Traefik (included) or Let's Encrypt with nginx
+
+### 📊 Monitoring and Logs
+
+#### Container Logs
+```bash
+# Docker logs
+docker logs mad-scientist
+
+# Follow logs
+docker logs -f mad-scientist
+
+# Using our scripts
+./docker-scripts.sh logs
+```
+
+#### Application Metrics
+- Health endpoint: `/health`
+- Logs are written to `logs/` directory (mounted as volume)
+- Structured logging with configurable levels
 
 ## 🛡️ Guard Rails & Responsible AI
 
