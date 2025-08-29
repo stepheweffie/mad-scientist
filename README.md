@@ -126,6 +126,16 @@ mad-scientist/
 ### Image Models
 - **Dreamshaper-8 LCM**: Photorealistic image generation
 
+#### 🎨 Avatar Generation Example
+
+<div align="center">
+  <img src="assets/examples/mad-scientist-avatar-example.png" alt="Mad Scientist AI Avatar Example" width="300" style="border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);" />
+  <br>
+  <em>Example avatar generated with Dreamshaper-8 LCM</em>
+</div>
+
+The AI can generate custom avatars based on your prompts, creating unique visual representations for your Mad Scientist AI interactions.
+
 ## 📝 Logging
 
 The application includes comprehensive logging:

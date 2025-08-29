@@ -74,10 +74,17 @@ tools/
 
 # Documentation assets
 docs/
+# Keep assets/examples for avatar showcases
+!assets/examples/
+# Exclude other image files
 *.png
 *.jpg
 *.gif
 *.svg
+# But keep our example images
+!assets/examples/*.png
+!assets/examples/*.jpg
+!assets/examples/*.gif
 
 # OS generated files
 Thumbs.db
