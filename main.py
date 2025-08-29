@@ -625,16 +625,16 @@ async def get_chat(request: Request, brain_model: str = Query(None), image_model
         if len(durl) > 0:
             data_url = durl['data_url']
         else:
-            # Use placeholder avatar if no image model provided or if avatar generation fails
+            # Use static avatar image if no image model provided or if avatar generation fails
             if image_model is None:
-                logger.warning("No image model provided, using placeholder avatar")
-                data_url = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzQ3MzIzZCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTZweCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJjZW50cmFsIj5NYWQgU2NpZW50aXN0PC90ZXh0Pjwvc3ZnPg=="
+                logger.warning("No image model provided, using static avatar")
+                data_url = "/static/avatar-default.png"
             else:
                 try:
                     data_url = await get_avatar_data_url(request, img_model=image_model, prompt_text='A Mad Scientist')
                 except Exception as avatar_error:
-                    logger.error(f"Avatar generation failed: {str(avatar_error)}, using placeholder")
-                    data_url = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzQ3MzIzZCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTZweCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJjZW50cmFsIj5NYWQgU2NpZW50aXN0PC90ZXh0Pjwvc3ZnPg=="
+                    logger.error(f"Avatar generation failed: {str(avatar_error)}, using static avatar")
+                    data_url = "/static/avatar-default.png"
             durl['data_url'] = data_url
             
         chat = await mad_scientist.get_session(request=request, variable="chat")
@@ -693,7 +693,7 @@ What aspect interests you most?"""
     except Exception as e:
         logger.error(f"Error in mad-scientist route: {str(e)}")
         # Return demo page as fallback
-        placeholder_avatar = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzQ3MzIzZCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTZweCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJjZW50cmFsIj5NYWQgU2NpZW50aXN0PC90ZXh0Pjwvc3ZnPg=="
+        placeholder_avatar = "/static/avatar-default.png"
         return templates.TemplateResponse("chat.html", {
             "request": request,
             "css_styles": css_styles,
@@ -741,9 +741,9 @@ async def demo(request: Request):
     logger.info("Demo route accessed")
     try:
         mad_scientist = MadScientist(request)
-        # Use a placeholder image instead of generating one
-        placeholder_avatar = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzQ3MzIzZCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTZweCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJjZW50cmFsIj5NYWQgU2NpZW50aXN0PC90ZXh0Pjwvc3ZnPg=="
-        durl['data_url'] = placeholder_avatar
+        # Use static avatar image instead of generating one
+        static_avatar = "/static/avatar-default.png"
+        durl['data_url'] = static_avatar
         
         return templates.TemplateResponse("chat.html", {
             "request": request,
@@ -751,7 +751,7 @@ async def demo(request: Request):
             "brain_model": "Demo Mode",
             "app_name": app_name,
             "message": "What are the main applications of quantum computing?",
-            "durl": placeholder_avatar,
+            "durl": static_avatar,
             "response": """Greetings! I'm your Mad Scientist AI assistant. Quantum computing has several exciting applications:
 
 **Key Applications:**

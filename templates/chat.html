@@ -374,6 +374,93 @@
             .response-container .response-content p:last-child {
                 margin-bottom: 0;
             }
+            
+            /* Responsive Design - Stack panes on smaller screens */
+            @media (max-width: 1024px) {
+                .container {
+                    flex-direction: column !important;
+                    height: auto !important;
+                    align-items: center !important;
+                    justify-content: flex-start !important;
+                    padding: 2rem 1rem !important;
+                }
+                
+                .form-container {
+                    width: 100% !important;
+                    max-width: 800px !important;
+                    height: auto !important;
+                    order: 1;
+                    margin-bottom: 2rem;
+                }
+                
+                .chat-container {
+                    width: 100% !important;
+                    max-width: 800px !important;
+                    height: auto !important;
+                    order: 2;
+                    margin-bottom: 0;
+                }
+                
+                .avatar-section {
+                    flex-direction: column;
+                    text-align: center;
+                    gap: 1rem;
+                }
+                
+                .avatar img {
+                    width: 120px;
+                    height: 120px;
+                }
+                
+                .user-message-container,
+                .response-container {
+                    min-height: auto;
+                    padding: 1.5rem;
+                }
+                
+                .input-section textarea {
+                    min-height: 120px;
+                }
+            }
+            
+            /* Mobile optimizations */
+            @media (max-width: 768px) {
+                .chat-header h2,
+                .ai-response-header h3 {
+                    font-size: 1.5rem;
+                }
+                
+                .beaker-icon {
+                    width: 1.5rem;
+                    height: 1.5rem;
+                }
+                
+                .beaker-icon:first-of-type {
+                    margin-right: 0.5rem;
+                }
+                
+                .beaker-icon:last-of-type {
+                    margin-left: 0.5rem;
+                }
+                
+                .avatar img {
+                    width: 100px;
+                    height: 100px;
+                }
+                
+                .user-message-container,
+                .response-container {
+                    padding: 1rem;
+                }
+                
+                .avatar-section {
+                    padding: 1rem;
+                }
+                
+                .input-section textarea {
+                    min-height: 100px;
+                }
+            }
         `;
         document.head.appendChild(style);
     </script>
