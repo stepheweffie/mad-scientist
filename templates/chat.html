@@ -8,6 +8,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>{{css_styles | safe}}</style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
 </head>
@@ -16,7 +18,7 @@
         <!-- Chat Input Section -->
         <div class="form-container">
             <div class="chat-header">
-                <h2>🧪 <span class="lab-title">Mad Scientist AI</span> 🧪</h2>
+                <h2><img src="/static/beaker_transparent.svg" class="beaker-icon" alt="Beaker"><span class="lab-title">Mad Scientist AI</span><img src="/static/beaker_transparent.svg" class="beaker-icon" alt="Beaker"></h2>
             </div>
             
             <form action="/mad-scientist/" method="post" class="chat-form">
@@ -56,17 +58,25 @@
         <!-- AI Response Section -->
         <div class="chat-container">
             <div class="ai-response-header">
-                <h3>Response</h3>
+                <h3>Mad Scientist AI</h3>
             </div>
             
-            <div class="ai-message">
+            <!-- Avatar Section -->
+            <div class="avatar-section">
                 <div class="avatar">
                     <img src="{{ durl }}" id="avatarImage" alt="Mad Scientist Avatar" loading="lazy">
                 </div>
-                
-                <div class="response-content">
+                <div class="avatar-welcome">
+                    <span class="welcome-message"><i class="fas fa-brain" style="margin-right: 0.5rem;"></i>Welcome to the Laboratory!</span>
+                    <span class="avatar-status"><i class="fas fa-atom" style="margin-right: 0.5rem;"></i>Ready for experimentation</span>
+                </div>
+            </div>
+            
+            <!-- AI Response Box -->
+            <div class="response-section">
+                <div class="response-container">
                     <span class="message-sender">Mad Scientist AI</span>
-                    <div class="message-text">
+                    <div class="response-content">
                         {{ response }}
                     </div>
                 </div>
@@ -128,6 +138,67 @@
                 margin: 0;
                 font-size: 1.8rem;
                 letter-spacing: -0.02em;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            
+            .beaker-icon {
+                width: 2rem;
+                height: 2rem;
+                transition: all 0.3s ease;
+                opacity: 0.9;
+                animation: chemicalSwirl 4s ease-in-out infinite;
+            }
+            
+            .beaker-icon:first-of-type {
+                margin-right: 0.75rem;
+                animation-delay: 0s;
+            }
+            
+            .beaker-icon:last-of-type {
+                margin-left: 0.75rem;
+                animation-delay: 2s;
+            }
+            
+            .chat-header:hover .beaker-icon {
+                transform: scale(1.1);
+                opacity: 1;
+                animation: chemicalReaction 1.2s ease-in-out infinite;
+            }
+            
+            @keyframes chemicalSwirl {
+                0%, 100% {
+                    transform: rotate(0deg) scale(1);
+                }
+                25% {
+                    transform: rotate(2deg) scale(1.05);
+                }
+                50% {
+                    transform: rotate(0deg) scale(1);
+                }
+                75% {
+                    transform: rotate(-2deg) scale(1.05);
+                }
+            }
+            
+            @keyframes chemicalReaction {
+                0%, 100% {
+                    transform: scale(1.1) rotate(0deg);
+                    filter: hue-rotate(0deg);
+                }
+                25% {
+                    transform: scale(1.2) rotate(3deg);
+                    filter: hue-rotate(30deg);
+                }
+                50% {
+                    transform: scale(1.1) rotate(0deg);
+                    filter: hue-rotate(60deg);
+                }
+                75% {
+                    transform: scale(1.2) rotate(-3deg);
+                    filter: hue-rotate(30deg);
+                }
             }
             
             .input-section {
@@ -211,16 +282,20 @@
                 letter-spacing: -0.02em;
             }
             
-            .ai-message {
+            /* Avatar Section Styling */
+            .avatar-section {
                 display: flex;
-                align-items: flex-start;
-                gap: 1rem;
-                flex: 1;
+                align-items: center;
+                gap: 1.5rem;
+                margin-bottom: 1.5rem;
+                padding: 1rem;
+                background: var(--surface-light);
+                border-radius: 12px;
+                border-left: 3px solid var(--glow-color);
             }
             
             .avatar {
                 flex-shrink: 0;
-                margin: 0;
             }
             
             .avatar img {
@@ -228,34 +303,76 @@
                 height: 160px;
                 object-fit: cover;
                 border-radius: 12px;
+                border: 2px solid var(--glow-color);
             }
             
-            .response-content {
+            .avatar-welcome {
                 flex: 1;
-                background: var(--surface-light);
-                padding: 0.75rem;
-                border-radius: 8px;
-                border-left: 3px solid var(--glow-color);
-                max-width: 70%;
+                display: flex;
+                flex-direction: column;
+                gap: 0.5rem;
             }
             
-            .response-content .message-sender {
+            .welcome-message {
                 color: var(--glow-color);
                 font-weight: 600;
-                margin-bottom: 0.25rem;
-                font-size: 0.9rem;
+                font-size: 1.1rem;
             }
             
-            .response-content .message-text {
+            .avatar-status {
+                color: var(--text-muted);
+                font-size: 0.9rem;
+                font-style: italic;
+            }
+            
+            /* Response Section Styling */
+            .response-section {
+                flex: 1;
+            }
+            
+            .response-container {
+                background: var(--surface-light);
+                padding: 1.5rem;
+                border-radius: 12px;
+                border-left: 3px solid var(--glow-color);
+                min-height: 200px;
+            }
+            
+            .response-container .message-sender {
+                color: var(--glow-color);
+                font-weight: 600;
+                margin-bottom: 0.75rem;
+                display: block;
+                font-size: 1rem;
+            }
+            
+            .response-container .response-content {
                 background: none;
                 border: none;
                 padding: 0;
                 margin: 0;
-                min-height: auto;
-                line-height: 1.4;
+                max-width: none;
+                line-height: 1.6;
                 white-space: pre-wrap;
                 color: var(--text-color);
-                font-size: 0.95rem;
+                font-size: 1rem;
+                word-wrap: break-word;
+                text-align: left;
+                text-indent: 0;
+            }
+            
+            .response-container .response-content p {
+                margin: 0 0 1rem 0;
+                padding: 0;
+                text-indent: 0;
+            }
+            
+            .response-container .response-content p:first-child {
+                margin-top: 0;
+            }
+            
+            .response-container .response-content p:last-child {
+                margin-bottom: 0;
             }
         `;
         document.head.appendChild(style);

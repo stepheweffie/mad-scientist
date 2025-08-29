@@ -2,7 +2,6 @@
 from fastapi import FastAPI, HTTPException, Query, Form, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
-from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 from mad_scientist import MadScientist, get_avatar_data_url, AI, brain_options, art_options, inputs, SECRET_KEY, GTAG
 from static import css_styles
@@ -20,7 +19,6 @@ logger = get_logger(__name__)
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
-app.mount("/static", StaticFiles(directory="static"), name="static")
 app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
 app_name = "Mad Scientist"
 durl = {}
@@ -57,7 +55,7 @@ async def model_api_name(model: str):
         model_name = mad_scientist.get_model_name_by_model(model=model)
         return model_name
 
-html_content = """
+html_content = f"""
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -67,7 +65,7 @@ html_content = """
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <style>""" + css_styles + """</style>
+    <style>{css_styles}</style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
 </head>
 <body>
@@ -78,14 +76,14 @@ html_content = """
             <div class="input-group">
                 <label for="brain_model">Language Model</label>
                 <select class="custom-select input-element" id="brain_model" name="brain_model" required>
-""" + brain_options + """
+                    {brain_options}
                 </select>
             </div>
             
             <div class="input-group">
                 <label for="image_model">Image Model</label>
                 <select class="custom-select input-element" id="image_model" name="image_model" required>
-""" + art_options + """
+                    {art_options}
                 </select>
             </div>
             
@@ -123,7 +121,7 @@ html_content = """
     </div>
     
     <script>
-        document.addEventListener('DOMContentLoaded', function() {{
+        document.addEventListener('DOMContentLoaded', function() {
             const promptInput = document.getElementById('prompt');
             const submitButton = document.querySelector('.submit');
             
@@ -131,28 +129,28 @@ html_content = """
             promptInput.focus();
             
             // Form validation
-            document.querySelector('.model-form').addEventListener('submit', function(e) {{
+            document.querySelector('.model-form').addEventListener('submit', function(e) {
                 const brainModel = document.getElementById('brain_model').value;
                 const imageModel = document.getElementById('image_model').value;
                 const prompt = document.getElementById('prompt').value;
                 
-                if (!brainModel || !imageModel || !prompt.trim()) {{
+                if (!brainModel || !imageModel || !prompt.trim()) {
                     e.preventDefault();
                     alert('Please fill in all fields before experimenting!');
                     submitButton.innerHTML = '🧪 Start Experiment!';
                     submitButton.classList.remove('loading');
-                }}
-            }});
+                }
+            });
             
             // Hover effects
-            document.querySelector('.form-containter').addEventListener('mouseenter', function() {{
+            document.querySelector('.form-containter').addEventListener('mouseenter', function() {
                 this.style.transform = 'translate(-50%, -50%) scale(1.02)';
-            }});
+            });
             
-            document.querySelector('.form-containter').addEventListener('mouseleave', function() {{
+            document.querySelector('.form-containter').addEventListener('mouseleave', function() {
                 this.style.transform = 'translate(-50%, -50%) scale(1)';
-            }});
-        }});
+            });
+        });
     </script>
     
     <style>
@@ -223,7 +221,7 @@ initial_html_content = f"""
 </head>
 <body>
     <div class="centered form-containter">
-        <h1><img src="/static/tube.svg" class="tube-icon" alt="Test Tube"> <span class="lab-title">Mad Scientist AI</span> <img src="/static/tube.svg" class="tube-icon" alt="Test Tube"></h1>
+        <h1>🧪 <span class="lab-title">Mad Scientist AI</span> 🧪</h1>
         
         <form action="/verify-email/" method="post" class="access-form">
             <div class="input-group">
@@ -344,51 +342,6 @@ initial_html_content = f"""
         
         .form-containter {{
             transition: all 0.3s ease;
-        }}
-        
-        .tube-icon {{
-            width: 2rem;
-            height: 2rem;
-            transition: all 0.3s ease;
-            opacity: 0.9;
-            vertical-align: middle;
-            animation: bubbleFloat 3s ease-in-out infinite;
-        }}
-        
-        .form-containter:hover .tube-icon {{
-            transform: scale(1.1);
-            opacity: 1;
-            animation: bubbleShake 0.8s ease-in-out infinite;
-        }}
-        
-        @keyframes bubbleFloat {{
-            0%, 100% {{
-                transform: translateY(0px) rotate(0deg);
-            }}
-            25% {{
-                transform: translateY(-3px) rotate(1deg);
-            }}
-            50% {{
-                transform: translateY(0px) rotate(0deg);
-            }}
-            75% {{
-                transform: translateY(-2px) rotate(-1deg);
-            }}
-        }}
-        
-        @keyframes bubbleShake {{
-            0%, 100% {{
-                transform: scale(1.1) rotate(0deg);
-            }}
-            25% {{
-                transform: scale(1.15) rotate(2deg);
-            }}
-            50% {{
-                transform: scale(1.1) rotate(0deg);
-            }}
-            75% {{
-                transform: scale(1.15) rotate(-2deg);
-            }}
         }}
     </style>
 </body>
@@ -617,91 +570,41 @@ async def generate_avatar(request: Request, brain_model: str = Query(None), imag
 
 @app.get("/mad-scientist/")
 async def get_chat(request: Request, brain_model: str = Query(None), image_model: str = Query(None), prompt: str = Query(None)):
-    logger.info("Mad Scientist chat route accessed")
-    try:
-        mad_scientist = MadScientist(request)
+    mad_scientist = MadScientist(request)
+    if len(durl) > 0:
+        data_url = durl['data_url']
+    else:
+        data_url = await get_avatar_data_url(request, img_model=image_model, prompt_text='A Mad Scientist')
+        durl['data_url'] = data_url
         
-        # Use existing avatar or fallback to placeholder
-        if len(durl) > 0:
-            data_url = durl['data_url']
-        else:
-            # Use placeholder avatar if no image model provided or if avatar generation fails
-            if image_model is None:
-                logger.warning("No image model provided, using placeholder avatar")
-                data_url = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzQ3MzIzZCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTZweCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJjZW50cmFsIj5NYWQgU2NpZW50aXN0PC90ZXh0Pjwvc3ZnPg=="
-            else:
-                try:
-                    data_url = await get_avatar_data_url(request, img_model=image_model, prompt_text='A Mad Scientist')
-                except Exception as avatar_error:
-                    logger.error(f"Avatar generation failed: {str(avatar_error)}, using placeholder")
-                    data_url = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzQ3MzIzZCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTZweCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJjZW50cmFsIj5NYWQgU2NpZW50aXN0PC90ZXh0Pjwvc3ZnPg=="
-            durl['data_url'] = data_url
-            
-        chat = await mad_scientist.get_session(request=request, variable="chat")
-        if chat is False:
-            # Use demo content if no brain model provided
-            if brain_model is None:
-                logger.warning("No brain model provided, using demo content")
-                ai_intro = """Greetings! I'm your Mad Scientist AI assistant. Quantum computing has several exciting applications:
-
-**Key Applications:**
-• **Cryptography**: Breaking current encryption and creating quantum-safe security
-• **Drug Discovery**: Simulating molecular interactions for faster pharmaceutical research
-• **Financial Modeling**: Advanced portfolio optimization and risk analysis
-• **AI & Machine Learning**: Accelerating pattern recognition and neural networks
-
-Quantum computers use quantum bits (qubits) that can exist in multiple states simultaneously, unlike classical bits. This allows them to explore many solutions at once through superposition and entanglement.
-
-However, they're still experimental - requiring near-absolute zero temperatures and having high error rates. They won't replace classical computers but will solve specific complex problems.
-
-What aspect interests you most?"""
-                brain_model = "Demo Mode"
-            else:
-                try:
-                    ai_intro = await mad_scientist.chat_message(request, brain_model, inputs)
-                    # Check it for obvious errors
-                    ai_intro = ai_intro.replace("Dr.", "").strip()
-                    ai_intro = ai_intro.replace("you are my", "I am your").strip()
-                except Exception as chat_error:
-                    logger.error(f"Chat message failed: {str(chat_error)}, using demo content")
-                    ai_intro = """Greetings! I'm your Mad Scientist AI assistant ready to help with your experiments and questions!"""
-                    brain_model = "Demo Mode"
-            
-            # Dummy message
-            message = 'Hello, Mad Scientist AI. Please introduce yourself.'
-            responses['intro'] = ai_intro
-            return templates.TemplateResponse("chat.html", {
-                "request": request,
-                "css_styles": css_styles,
-                "brain_model": brain_model or "Demo Mode",
-                "app_name": app_name,
-                "message": message,
-                "durl": data_url,
-                "response": responses['intro'],
-            })
-        
-        else:
-            return templates.TemplateResponse("chat.html", {
-                "request": request,
-                "css_styles": css_styles,
-                "brain_model": brain_model or "Demo Mode",
-                "app_name": app_name,
-                "message": prompt or "What can you help me with?",
-                "durl": data_url,
-                "response": responses['ai'][-1] if responses['ai'] else "Hello! I'm ready to help with your scientific questions and experiments.",
-            })
-    except Exception as e:
-        logger.error(f"Error in mad-scientist route: {str(e)}")
-        # Return demo page as fallback
-        placeholder_avatar = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzQ3MzIzZCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTZweCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJjZW50cmFsIj5NYWQgU2NpZW50aXN0PC90ZXh0Pjwvc3ZnPg=="
+    chat = await mad_scientist.get_session(request=request, variable="chat")
+    if chat is False:
+        ai_intro = await mad_scientist.chat_message(request, brain_model, inputs)
+        # Check it for obvious errors
+        ai_intro = ai_intro.replace("Dr.", "").strip()
+        ai_intro = ai_intro.replace("you are my", "I am your").strip()
+        # Dummy message
+        message = 'Hello, Mad Scientist AI. Please introduce yourself.'
+        responses['intro'] = ai_intro
         return templates.TemplateResponse("chat.html", {
             "request": request,
             "css_styles": css_styles,
-            "brain_model": "Demo Mode",
+            "brain_model": brain_model,
             "app_name": app_name,
-            "message": "What are the main applications of quantum computing?",
-            "durl": placeholder_avatar,
-            "response": """Greetings! I'm your Mad Scientist AI assistant. I'm currently in demo mode. Please use the proper avatar generation flow to access full functionality."""
+            "message": message,
+            "durl": data_url,
+            "response": responses['intro'],
+        })
+    
+    else:
+        return templates.TemplateResponse("chat.html", {
+            "request": request,
+            "css_styles": css_styles,
+            "brain_model": brain_model,
+            "app_name": app_name,
+            "message": prompt,
+            "durl": data_url,
+            "response": responses['ai'][-1],
         })
             
 
@@ -750,21 +653,9 @@ async def demo(request: Request):
             "css_styles": css_styles,
             "brain_model": "Demo Mode",
             "app_name": app_name,
-            "message": "What are the main applications of quantum computing?",
+            "message": "Demo chat without API",
             "durl": placeholder_avatar,
-            "response": """Greetings! I'm your Mad Scientist AI assistant. Quantum computing has several exciting applications:
-
-**Key Applications:**
-• **Cryptography**: Breaking current encryption and creating quantum-safe security
-• **Drug Discovery**: Simulating molecular interactions for faster pharmaceutical research
-• **Financial Modeling**: Advanced portfolio optimization and risk analysis
-• **AI & Machine Learning**: Accelerating pattern recognition and neural networks
-
-Quantum computers use quantum bits (qubits) that can exist in multiple states simultaneously, unlike classical bits. This allows them to explore many solutions at once through superposition and entanglement.
-
-However, they're still experimental - requiring near-absolute zero temperatures and having high error rates. They won't replace classical computers but will solve specific complex problems.
-
-What aspect interests you most?"""
+            "response": "Welcome to Mad Scientist AI! This is demo mode - the chat AI is not connected but you can see the interface.",
         })
     except Exception as e:
         logger.error(f"Error in demo route: {str(e)}")
