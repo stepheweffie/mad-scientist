@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  mad-scientist:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: mad-scientist-prod
+    ports:
+      - "80:8000"  # Production typically runs on port 80
+    environment:
+      # Production settings
+      - LOG_LEVEL=${LOG_LEVEL:-WARNING}
+      - SECRET_KEY=${SECRET_KEY}  # Must be provided
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      
+      # Cloudflare API configuration
+      - API_BASE_URL=${API_BASE_URL}
+      - ACCOUNT_ID=${ACCOUNT_ID}
+      - AUTH_TOKEN=${AUTH_TOKEN}
+      - GTAG=${GTAG:-}
+    volumes:
+      # Persistent log storage
+      - mad_scientist_logs:/app/logs:rw
+    restart: always
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - mad-scientist-prod-network
+      - traefik-network  # If using Traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mad-scientist.rule=Host(`${DOMAIN:-localhost`)"
+      - "traefik.http.routers.mad-scientist.entrypoints=websecure"
+      - "traefik.http.routers.mad-scientist.tls.certresolver=letsencrypt"
+      - "traefik.http.services.mad-scientist.loadbalancer.server.port=8000"
+      # Security headers
+      - "traefik.http.routers.mad-scientist.middlewares=security-headers"
+      - "traefik.http.middlewares.security-headers.headers.frameDeny=true"
+      - "traefik.http.middlewares.security-headers.headers.contentTypeNosniff=true"
+
+  # Optional: Add a reverse proxy for production
+  nginx:
+    image: nginx:alpine
+    container_name: mad-scientist-nginx
+    ports:
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - mad-scientist
+    restart: always
+    networks:
+      - mad-scientist-prod-network
+
+volumes:
+  mad_scientist_logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /var/log/mad-scientist
+
+networks:
+  mad-scientist-prod-network:
+    driver: bridge
+  traefik-network:
+    external: true

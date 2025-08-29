@@ -1,9 +1,60 @@
 version: '3.8'
 
 services:
-  web:
-    build: .
+  mad-scientist:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: mad-scientist-app
     ports:
-      - "8000:8000"
+      - "${PORT:-8000}:8000"
     environment:
-      - PORT=8000
+      # Application settings
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
+      
+      # Cloudflare API configuration
+      - API_BASE_URL=${API_BASE_URL}
+      - ACCOUNT_ID=${ACCOUNT_ID}
+      - AUTH_TOKEN=${AUTH_TOKEN}
+      - GTAG=${GTAG:-}
+      
+      # Container-specific settings
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+    volumes:
+      # Persistent log storage
+      - logs_data:/app/logs
+      # Mount environment file if it exists
+      - type: bind
+        source: ${ENV_FILE:-.env}
+        target: /app/.env
+        read_only: true
+        bind:
+          create_host_path: false
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - mad-scientist-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mad-scientist.rule=Host(`localhost`)"
+      - "traefik.http.services.mad-scientist.loadbalancer.server.port=8000"
+
+volumes:
+  logs_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./logs
+
+networks:
+  mad-scientist-network:
+    driver: bridge

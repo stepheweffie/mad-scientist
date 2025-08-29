@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  mad-scientist-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production  # Use same target but with dev overrides
+    container_name: mad-scientist-dev
+    ports:
+      - "8000:8000"
+    environment:
+      # Development settings
+      - LOG_LEVEL=DEBUG
+      - SECRET_KEY=dev-secret-key-not-for-production
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      
+      # Cloudflare API (load from .env)
+      - API_BASE_URL=${API_BASE_URL}
+      - ACCOUNT_ID=${ACCOUNT_ID}
+      - AUTH_TOKEN=${AUTH_TOKEN}
+      - GTAG=${GTAG:-}
+    volumes:
+      # Mount source code for live editing (if needed for debugging)
+      - ./logs:/app/logs
+      # Mount environment file
+      - ./.env:/app/.env:ro
+    restart: "no"  # Don't auto-restart in development
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - mad-scientist-dev-network
+
+networks:
+  mad-scientist-dev-network:
+    driver: bridge
+    name: mad-scientist-dev

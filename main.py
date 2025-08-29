@@ -238,6 +238,18 @@ async def post_email(request: Request, email: str = Form(...)):
     return response
 
 
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for Docker and load balancers."""
+    logger.info("Health check requested")
+    return {
+        "status": "healthy",
+        "service": "Mad Scientist AI",
+        "version": "1.0.0",
+        "timestamp": "2025-08-29T01:03:00Z"
+    }
+
+
 # @app.get("/mad-scientist/session/messages", response_model=list[MESSAGE], response_class=PlainTextResponse)
 # async def get_messages(request: Request)
 #    messages = await self.get_session(request, "messages") or []
