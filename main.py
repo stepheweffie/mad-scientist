@@ -5,12 +5,17 @@ from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 from mad_scientist import MadScientist, get_avatar_data_url, AI, brain_options, art_options, inputs, SECRET_KEY, GTAG
 from static import css_styles
+from logging_config import setup_logging, get_logger
 import requests
 import httpx
 import logging
+import os
 from urllib.parse import quote, urlencode
 
-logger = logging.getLogger(__name__)
+# Setup logging
+log_level = os.getenv("LOG_LEVEL", "INFO")
+setup_logging(log_level)
+logger = get_logger(__name__)
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
@@ -22,9 +27,15 @@ responses['ai'] = []
 
 @app.get("/models", response_model=list[AI], response_class=PlainTextResponse)
 async def models(request: Request):
-    mad_scientist = MadScientist(request)
-    models = mad_scientist.get_models()
-    return models 
+    logger.info("Fetching available models")
+    try:
+        mad_scientist = MadScientist(request)
+        models = mad_scientist.get_models()
+        logger.debug(f"Retrieved {len(models) if models else 0} models")
+        return models
+    except Exception as e:
+        logger.error(f"Error fetching models: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to fetch models")
 
 @app.get("/models/{model}", response_model=list[AI], response_class=PlainTextResponse)
 async def model_by_name(request: Request, model: str):
@@ -98,17 +109,29 @@ initial_html_content = f"""
 
 @app.get("/")
 async def root(request: Request):
-    mad_scientist = MadScientist(request)
-    messages = await mad_scientist.set_session(request=request, variable="messages", data='')
-    token = await mad_scientist.set_session(request=request, variable="token", data='')    
-    return HTMLResponse(content=initial_html_content, status_code=200)
+    logger.info("Root endpoint accessed")
+    try:
+        mad_scientist = MadScientist(request)
+        messages = await mad_scientist.set_session(request=request, variable="messages", data='')
+        token = await mad_scientist.set_session(request=request, variable="token", data='')    
+        logger.debug("Session initialized for new user")
+        return HTMLResponse(content=initial_html_content, status_code=200)
+    except Exception as e:
+        logger.error(f"Error in root endpoint: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/generate-avatar/")
 async def generate_avatar(request: Request, brain_model: str = Query(None), image_model: str = Query(None), prompt: str = Query(None)):
-    mad_scientist = MadScientist(request)
-    data_url = await get_avatar_data_url(request, img_model=image_model, prompt_text=prompt)
-    durl['data_url'] = data_url
-    await mad_scientist.set_session(request=request, variable="chat", data=False)
+    logger.info(f"Generating avatar with model: {image_model}, prompt: {prompt}")
+    try:
+        mad_scientist = MadScientist(request)
+        data_url = await get_avatar_data_url(request, img_model=image_model, prompt_text=prompt)
+        durl['data_url'] = data_url
+        await mad_scientist.set_session(request=request, variable="chat", data=False)
+        logger.debug("Avatar generated successfully")
+    except Exception as e:
+        logger.error(f"Error generating avatar: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to generate avatar")
 
     avatar_page = f'''
     <!DOCTYPE html>
@@ -187,17 +210,23 @@ async def get_chat(request: Request, brain_model: str = Query(None), image_model
 
 @app.post("/mad-scientist/")
 async def post_chat(request: Request, prompt: str = Form(...), brain_model: str = Form(...)):
-    mad_scientist = MadScientist(request)
-    ai_response = await mad_scientist.chat_message(request, brain_model, prompt)
-    # Redirect back to the GET chat page to display the updated chat history
-    ai = responses['ai']
-    ai.append(ai_response)
-    response = RedirectResponse(
-        url=f"/mad-scientist/?brain_model={brain_model}&app_name={app_name}&prompt={prompt}",
-        status_code=303
-    )
-    response.set_cookie(key="session", value=request.session)  # Ensure the session cookie is updated
-    return response
+    logger.info(f"Chat message received: {prompt[:100]}{'...' if len(prompt) > 100 else ''} using model: {brain_model}")
+    try:
+        mad_scientist = MadScientist(request)
+        ai_response = await mad_scientist.chat_message(request, brain_model, prompt)
+        # Redirect back to the GET chat page to display the updated chat history
+        ai = responses['ai']
+        ai.append(ai_response)
+        logger.debug(f"AI response generated, length: {len(ai_response) if ai_response else 0}")
+        response = RedirectResponse(
+            url=f"/mad-scientist/?brain_model={brain_model}&app_name={app_name}&prompt={prompt}",
+            status_code=303
+        )
+        response.set_cookie(key="session", value=request.session)  # Ensure the session cookie is updated
+        return response
+    except Exception as e:
+        logger.error(f"Error in chat: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to process chat message")
 
 
 @app.post("/verify-email/")

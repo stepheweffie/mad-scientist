@@ -7,6 +7,11 @@ import os
 from typing import Any, Dict
 # from mad_sci_mistral_instruct import tokenizer
 import requests
+from logging_config import get_logger
+
+# Setup logging
+logger = get_logger(__name__)
+
 SECRET_KEY = os.getenv("SECRET_KEY")
 API_BASE_URL = os.getenv("API_BASE_URL")
 ACCOUNT_ID = os.getenv("ACCOUNT_ID")
@@ -80,36 +85,47 @@ class Token(BaseModel):
     token_type: str
 
 async def get_avatar_data_url(request: Request, img_model: str, prompt_text: str):
-    mad_sci = MadScientist(request)
-    model_name_response = await mad_sci.get_model_name_by_model(request, model=img_model)
-    model_name = model_name_response.strip()  # Remove leading/trailing whitespace
-    mid_response = await mad_sci.get_mid_by_model_name(request, model=model_name)
-    mid = mid_response.strip()  # Remove leading/trailing whitespace
-    
-    # Prepare the JSON payload according to the input schema
-    json_payload = {
-        "prompt": prompt_text,
-            # Add other fields if necessary
-            # "num_steps": 20,
-            # "strength": 1,
-            # "guidance": 7.5,
-    }
-    
-    # Make the API call
-    response = requests.post(
-        f"{API_BASE_URL}{mid}",
-        headers=headers,
-        json=json_payload
-    )
-    
-    if response.status_code == 200:
-        # Assuming the response.content is the binary image data
-        image_data = response.content
-        image_base64 = base64.b64encode(image_data).decode('utf-8')
-        data_url = f"data:image/png;base64,{image_base64}"
-        return data_url
-    else:
-        raise HTTPException(status_code=response.status_code, detail="Failed to generate image")
+    logger.info(f"Generating avatar image with model: {img_model}, prompt: '{prompt_text}'")
+    try:
+        mad_sci = MadScientist(request)
+        model_name_response = await mad_sci.get_model_name_by_model(request, model=img_model)
+        model_name = model_name_response.strip()  # Remove leading/trailing whitespace
+        logger.debug(f"Resolved model name: {model_name}")
+        
+        mid_response = await mad_sci.get_mid_by_model_name(request, model=model_name)
+        mid = mid_response.strip()  # Remove leading/trailing whitespace
+        logger.debug(f"Resolved model ID: {mid}")
+        
+        # Prepare the JSON payload according to the input schema
+        json_payload = {
+            "prompt": prompt_text,
+                # Add other fields if necessary
+                # "num_steps": 20,
+                # "strength": 1,
+                # "guidance": 7.5,
+        }
+        
+        logger.debug(f"Making API call to: {API_BASE_URL}{mid}")
+        # Make the API call
+        response = requests.post(
+            f"{API_BASE_URL}{mid}",
+            headers=headers,
+            json=json_payload
+        )
+        
+        if response.status_code == 200:
+            # Assuming the response.content is the binary image data
+            image_data = response.content
+            image_base64 = base64.b64encode(image_data).decode('utf-8')
+            data_url = f"data:image/png;base64,{image_base64}"
+            logger.info("Avatar image generated successfully")
+            return data_url
+        else:
+            logger.error(f"API call failed with status {response.status_code}: {response.text}")
+            raise HTTPException(status_code=response.status_code, detail="Failed to generate image")
+    except Exception as e:
+        logger.error(f"Error in get_avatar_data_url: {str(e)}")
+        raise
 
 class MadScientist:
     def __init__(self, request: Request):
@@ -153,36 +169,58 @@ class MadScientist:
             
 
     async def chat(self, request: Request, mod_id: str, user_message: str) -> dict:
-        # Update the user's message within the inputs structure
-        if type(user_message) is list:
-            updated_inputs = user_message
-        else:
-            updated_inputs = [{"role": "user", "content": user_message}]
-        payload = {
-        "messages": updated_inputs}  # Use the updated inputs with the user's message
-        # Send the request to the AI model
-        response = requests.post(
-        f"{API_BASE_URL}{mod_id}",
-        headers=headers,
-        json=payload)
-        result = response.json()
-        # Check for a successful response and extract the reply
-        if response.status_code == 200:
-            if 'result' in result and 'response' in result['result']:
-                data = {"message": result['result']['response'], "model": mod_id, "prompt": user_message}
+        logger.info(f"Starting chat with model {mod_id}")
+        logger.debug(f"User message type: {type(user_message)}, content preview: {str(user_message)[:100] if isinstance(user_message, str) else 'List of messages'}")
+        
+        try:
+            # Update the user's message within the inputs structure
+            if type(user_message) is list:
+                updated_inputs = user_message
+            else:
+                updated_inputs = [{"role": "user", "content": user_message}]
+            
+            payload = {
+                "messages": updated_inputs
+            }  # Use the updated inputs with the user's message
+            
+            logger.debug(f"Making API call to {API_BASE_URL}{mod_id}")
+            # Send the request to the AI model
+            response = requests.post(
+                f"{API_BASE_URL}{mod_id}",
+                headers=headers,
+                json=payload
+            )
+            
+            logger.debug(f"API response status: {response.status_code}")
+            result = response.json()
+            
+            # Check for a successful response and extract the reply
+            if response.status_code == 200:
+                if 'result' in result and 'response' in result['result']:
+                    ai_response = result['result']['response']
+                    logger.info(f"Received AI response, length: {len(ai_response)}")
                     
-                ai_response = result['result']['response']
-                # Append the user message and AI response to the session messages
-                messages = await self.get_session(request, "messages") or []
-                messages.append({
-                    "user": user_message,
-                    "ai": ai_response
-                })
-                await self.set_session(request=request, variable="messages", data=messages)
-                return ai_response
-        else:
-            # Handle any errors from the API call
-            raise HTTPException(status_code=response.status_code, detail="Failed to call AI model")
+                    # Append the user message and AI response to the session messages
+                    messages = await self.get_session(request, "messages") or []
+                    messages.append({
+                        "user": user_message,
+                        "ai": ai_response
+                    })
+                    await self.set_session(request=request, variable="messages", data=messages)
+                    logger.debug(f"Session updated with {len(messages)} total messages")
+                    return ai_response
+                else:
+                    logger.error(f"Unexpected API response format: {result}")
+                    raise HTTPException(status_code=500, detail="Invalid API response format")
+            else:
+                logger.error(f"API call failed with status {response.status_code}: {response.text}")
+                raise HTTPException(status_code=response.status_code, detail="Failed to call AI model")
+        except requests.RequestException as e:
+            logger.error(f"Network error during API call: {str(e)}")
+            raise HTTPException(status_code=503, detail="Network error communicating with AI model")
+        except Exception as e:
+            logger.error(f"Unexpected error in chat method: {str(e)}")
+            raise
 
 
     async def finetuned_chat(self, request: Request, mod_id: str, user_message: str) -> dict:
@@ -204,26 +242,42 @@ class MadScientist:
 
         
     async def chat_message(self, request: Request, brain_model: str, message: str) -> str:
+        logger.info(f"Processing chat message with brain model: {brain_model}")
+        logger.debug(f"Message preview: {str(message)[:100] if isinstance(message, str) else str(message)[:100]}")
+        
         try:
             # Call the /models/{model} route to get the model name
             model_name_response = await self.get_model_name_by_model(request, brain_model)
             model_name = model_name_response.strip()  # Remove leading/trailing whitespace
+            logger.debug(f"Resolved brain model name: {model_name}")
         except HTTPException as e:
             logger.error(f"Failed to get model name for {brain_model}: {e}")
-            return HTMLResponse(content=f"Model not found: {brain_model}", status_code=404)
+            raise HTTPException(status_code=404, detail=f"Model not found: {brain_model}")
+            
         try:
             mid_response = await self.get_mid_by_model_name(request, model_name)
             mid = mid_response.strip()  # Remove leading/trailing whitespace
+            logger.debug(f"Resolved brain model ID: {mid}")
+            
             chat = await self.get_session(request=request, variable="chat")
+            logger.debug(f"Chat session status: {chat}")
+            
             if chat is False:
+                logger.info("Starting new chat session with introduction")
                 reply = await self.chat(request, mid, inputs)
                 await self.set_session(request=request, variable="chat", data=True)
             else:
+                logger.info("Continuing existing chat session")
                 reply = await self.chat(request, mid, message)
+                
         except HTTPException as e:
-            logger.error(f"Failed to get model id name for {model_name}: {e}")
-            return HTMLResponse(content=f"Model not found: {brain_model}", status_code=404)
+            logger.error(f"Failed to get model id for {model_name}: {e}")
+            raise HTTPException(status_code=404, detail=f"Model configuration error: {brain_model}")
+        except Exception as e:
+            logger.error(f"Unexpected error in chat_message: {str(e)}")
+            raise HTTPException(status_code=500, detail="Internal error processing chat message")
         
         await self.set_session(request=request, variable='chat', data=True)
+        logger.info("Chat message processed successfully")
         return reply
     
